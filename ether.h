@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 #include <cstring>
 
+#define CallBackType(VariableName) void (*VariableName)(u_char *, const struct pcap_pkthdr *, const u_char *)
+
 void EtherPrintDevices(pcap_if_t *devs)
 {
     std::cout << "Available devices:" << std::endl;
@@ -87,6 +89,35 @@ pcap_t * EtherOpenDevice(pcap_if_t *devs, pcap_if_t *device, char *errbuf)
         exit(EXIT_FAILURE);
     }
     return handle;
+}
+
+void EtherSetFilter(pcap_t *handle, const char *filter_exp)
+{
+    struct bpf_program fp;
+    if (pcap_compile(handle, &fp, filter_exp, 0, PCAP_NETMASK_UNKNOWN) == -1) {
+        std::cerr << "Couldn't parse filter: " << pcap_geterr(handle) << std::endl;
+        pcap_close(handle);
+        exit(EXIT_FAILURE);
+    }
+    if (pcap_setfilter(handle, &fp) == -1) {
+        std::cerr << "Couldn't install filter: " << pcap_geterr(handle) << std::endl;
+        pcap_freecode(&fp);
+        pcap_close(handle);
+        exit(EXIT_FAILURE);
+    }
+    pcap_freecode(&fp);
+}
+
+pcap_dumper_t* EtherDumpOpen(pcap_if_t *devs, pcap_t *handle, const char *filename)
+{
+    pcap_dumper_t *dumper = pcap_dump_open(handle, filename);
+    if (!dumper) {
+        std::cerr << "Couldn't open dump file: " << pcap_geterr(handle) << std::endl;
+        pcap_close(handle);
+        pcap_freealldevs(devs);
+        exit(EXIT_FAILURE);
+    }
+    return dumper;
 }
 
 void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void (*callback)(u_char *, const struct pcap_pkthdr *, const u_char *), u_char *user_arg)

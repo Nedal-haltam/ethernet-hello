@@ -1,14 +1,18 @@
-.PHONY: all build-main build-raw wire-shark clean
+.PHONY: all build-ether build-save-ether build-raw wire-shark clean
 
 CXX := g++
 CXXFLAGS := -Wall -Wextra -O2
 
-all: build-main build-raw
+all: build-ether build-save-ether build-raw
 	@echo "✅ Built successfully."
 
-build-main: main.cpp
-	@echo "🔧 Building main..."
-	$(CXX) $(CXXFLAGS) -o main main.cpp -lpcap
+build-ether: main.cpp
+	@echo "🔧 Building ether..."
+	$(CXX) $(CXXFLAGS) -DDEFAULT -o ether main.cpp -lpcap
+
+build-save-ether: main.cpp
+	@echo "🔧 Building save-ether..."
+	$(CXX) $(CXXFLAGS) -o save-ether main.cpp -lpcap
 
 build-raw: raw.cpp
 	@echo "🔧 Building raw..."
@@ -19,4 +23,4 @@ wire-shark:
 
 clean:
 	@echo "🧹 Cleaning up..."
-	rm -f raw pcap save-pcap
+	rm -f raw ether save-ether
