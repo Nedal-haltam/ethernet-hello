@@ -36,7 +36,7 @@ void EtherPrintDevices(pcap_if_t *devs)
 }
 
 void PacketHandler_Printer(u_char *user, const struct pcap_pkthdr *header, const u_char *packet) {
-    USER_TYPE user_info = reinterpret_cast<USER_TYPE>(user);
+    const char* user_info = reinterpret_cast<const char*>(user);
     
     const struct ether_header *eth = (struct ether_header *)packet;
     std::cout << "[User Info]: " << user_info << std::endl;
