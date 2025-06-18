@@ -4,5 +4,6 @@
 !.gitattributes
 !*/
 !*.cpp
+!*.h
 !Makefile
 !README.md
