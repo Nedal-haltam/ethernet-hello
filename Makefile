@@ -1,22 +1,18 @@
-.PHONY: all build-raw build-pcap build-save-pcap wire-shark clean
+.PHONY: all build-main build-raw wire-shark clean
 
 CXX := g++
 CXXFLAGS := -Wall -Wextra -O2
 
-all: build-raw build-pcap build-save-pcap
+all: build-main build-raw
 	@echo "✅ Built successfully."
+
+build-main: main.cpp
+	@echo "🔧 Building main..."
+	$(CXX) $(CXXFLAGS) -o main main.cpp -lpcap
 
 build-raw: raw.cpp
 	@echo "🔧 Building raw..."
 	$(CXX) $(CXXFLAGS) -o raw raw.cpp
-
-build-pcap: pcap.cpp
-	@echo "🔧 Building pcap..."
-	$(CXX) $(CXXFLAGS) -o pcap pcap.cpp -lpcap
-
-build-save-pcap: save-pcap.cpp
-	@echo "🔧 Building save-pcap..."
-	$(CXX) $(CXXFLAGS) -o save-pcap save-pcap.cpp -lpcap
 
 wire-shark:
 	wireshark capture_output.pcap

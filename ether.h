@@ -34,6 +34,27 @@ void EtherPrintDevices(pcap_if_t *devs)
         std::cout << "-----------------------------" << std::endl;
     }
 }
+
+void PacketHandler_Printer(u_char *user, const struct pcap_pkthdr *header, const u_char *packet) {
+    USER_TYPE user_info = reinterpret_cast<USER_TYPE>(user);
+    
+    const struct ether_header *eth = (struct ether_header *)packet;
+    std::cout << "[User Info]: " << user_info << std::endl;
+    std::cout << "Ethernet Frame:" << std::endl;
+    std::cout << "  Src MAC: " << ether_ntoa((const struct ether_addr *)eth->ether_shost) << std::endl;
+    std::cout << "  Dst MAC: " << ether_ntoa((const struct ether_addr *)eth->ether_dhost) << std::endl;
+    std::cout << "  EtherType: 0x" << std::hex << ntohs(eth->ether_type) << std::dec << std::endl;
+
+    if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
+        const struct ip *ip_hdr = (struct ip *)(packet + sizeof(struct ether_header));
+        std::cout << "  IP Src: " << inet_ntoa(ip_hdr->ip_src) << std::endl;
+        std::cout << "  IP Dst: " << inet_ntoa(ip_hdr->ip_dst) << std::endl;
+    }
+
+    std::cout << "  Packet size: " << header->len << " bytes" << std::endl;
+    std::cout << "-----------------------------" << std::endl;
+}
+
 pcap_if_t* EtherInitDevices()
 {
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -70,6 +91,8 @@ pcap_t * EtherOpenDevice(pcap_if_t *devs, pcap_if_t *device, char *errbuf)
 
 void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void (*callback)(u_char *, const struct pcap_pkthdr *, const u_char *), u_char *user_arg)
 {
+    if (callback == NULL)
+        callback = PacketHandler_Printer;
     if (pcap_loop(handle, num_packets, callback, user_arg) < 0) {
         std::cerr << "Error capturing packets: " << pcap_geterr(handle) << std::endl;
         pcap_close(handle);
