@@ -36,17 +36,25 @@ void EtherPrintDevices(pcap_if_t *devs)
         std::cout << "-----------------------------" << std::endl;
     }
 }
-
+#define ETHERNET_HEADER_LENGTH sizeof(struct ether_header)
 void PacketHandler_Printer(u_char *user, const struct pcap_pkthdr *header, const u_char *packet) {
+    static int counter = 1;
     const char* user_info = reinterpret_cast<const char*>(user);
     
     const struct ether_header *eth = (struct ether_header *)packet;
+    std::cout << "Packet No." << counter++ << std::endl;
     std::cout << "[User Info]: " << user_info << std::endl;
     std::cout << "Ethernet Frame:" << std::endl;
     std::cout << "  Src MAC: " << ether_ntoa((const struct ether_addr *)eth->ether_shost) << std::endl;
     std::cout << "  Dst MAC: " << ether_ntoa((const struct ether_addr *)eth->ether_dhost) << std::endl;
     std::cout << "  EtherType: 0x" << std::hex << ntohs(eth->ether_type) << std::dec << std::endl;
+    // Display payload (first 32 bytes or up to packet length)
+    int payload_len = header->len - ETHERNET_HEADER_LENGTH;
+    std::cout << "  Payload (" << payload_len << " bytes): ";
+    const u_char* payload = packet + ETHERNET_HEADER_LENGTH;
+    printf("payload as string: `%s`", payload);
 
+    std::cout << std::endl;
     if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
         const struct ip *ip_hdr = (struct ip *)(packet + sizeof(struct ether_header));
         std::cout << "  IP Src: " << inet_ntoa(ip_hdr->ip_src) << std::endl;
