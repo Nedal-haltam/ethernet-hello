@@ -7,7 +7,25 @@
 #include <arpa/inet.h>
 #include <cstring>
 
-#define CallBackType(VariableName) void (*VariableName)(u_char *, const struct pcap_pkthdr *, const u_char *)
+#define CallBackType(VariableName) void (*VariableName)(u_char *, const pcap_pkthdr *, const u_char *)
+
+// 8 + (6 + 6 + 2 + [PAYLOAD_LEN]) + 4
+// we construct: (6 + 6 + 2 + [PAYLOAD_LEN]) -> (14 + [PAYLOAD_LEN])
+
+#define ETHER_HEADER_LEN (sizeof(ether_header))
+#define ETHER_PAYLOAD_LEN (1500)
+#define ETHER_MAX_FRAME_LEN (ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
+#define ETHER_ETHER_TYPE (0x88B5)
+
+#define PROTOCOL_MESSAGE_TYPE_LEN (5)
+#define PROTOCOL_MESSAGE_LENGTH_LEN (5)
+#pragma pack(push, 1)
+struct Protocol {
+    uint8_t MessageType[PROTOCOL_MESSAGE_TYPE_LEN];
+    uint8_t MessageLength[PROTOCOL_MESSAGE_LENGTH_LEN];
+};
+#pragma pack(pop)
+#define ETHER_PROTOCOL_LEN sizeof(Protocol)
 
 void EtherPrintDevices(pcap_if_t *devs)
 {
@@ -23,12 +41,12 @@ void EtherPrintDevices(pcap_if_t *devs)
             for (pcap_addr_t *addr = d->addresses; addr != nullptr; addr = addr->next) {
                 if (addr->addr) {
                     char ip[INET_ADDRSTRLEN];
-                    inet_ntop(AF_INET, &((struct sockaddr_in *)addr->addr)->sin_addr, ip, sizeof(ip));
+                    inet_ntop(AF_INET, &((sockaddr_in *)addr->addr)->sin_addr, ip, sizeof(ip));
                     std::cout << "   - IP: " << ip << std::endl;
                 }
                 if (addr->netmask) {
                     char netmask[INET_ADDRSTRLEN];
-                    inet_ntop(AF_INET, &((struct sockaddr_in *)addr->netmask)->sin_addr, netmask, sizeof(netmask));
+                    inet_ntop(AF_INET, &((sockaddr_in *)addr->netmask)->sin_addr, netmask, sizeof(netmask));
                     std::cout << "   - Netmask: " << netmask << std::endl;
                 }
             }
@@ -36,27 +54,27 @@ void EtherPrintDevices(pcap_if_t *devs)
         std::cout << "-----------------------------" << std::endl;
     }
 }
-#define ETHERNET_HEADER_LENGTH sizeof(struct ether_header)
-void PacketHandler_Printer(u_char *user, const struct pcap_pkthdr *header, const u_char *packet) {
+
+void PacketHandler_Printer(u_char *user, const pcap_pkthdr *header, const u_char *packet) {
     static int counter = 1;
     const char* user_info = reinterpret_cast<const char*>(user);
     
-    const struct ether_header *eth = (struct ether_header *)packet;
+    const ether_header *eth = (ether_header *)packet;
     std::cout << "Packet No." << counter++ << std::endl;
     std::cout << "[User Info]: " << user_info << std::endl;
     std::cout << "Ethernet Frame:" << std::endl;
-    std::cout << "  Src MAC: " << ether_ntoa((const struct ether_addr *)eth->ether_shost) << std::endl;
-    std::cout << "  Dst MAC: " << ether_ntoa((const struct ether_addr *)eth->ether_dhost) << std::endl;
+    std::cout << "  Src MAC: " << ether_ntoa((const ether_addr *)eth->ether_shost) << std::endl;
+    std::cout << "  Dst MAC: " << ether_ntoa((const ether_addr *)eth->ether_dhost) << std::endl;
     std::cout << "  EtherType: 0x" << std::hex << ntohs(eth->ether_type) << std::dec << std::endl;
     // Display payload (first 32 bytes or up to packet length)
-    int payload_len = header->len - ETHERNET_HEADER_LENGTH;
+    int payload_len = header->len - ETHER_HEADER_LEN;
     std::cout << "  Payload (" << payload_len << " bytes): ";
-    const u_char* payload = packet + ETHERNET_HEADER_LENGTH;
+    const u_char* payload = packet + ETHER_HEADER_LEN;
     printf("payload as string: `%s`", payload);
 
     std::cout << std::endl;
     if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
-        const struct ip *ip_hdr = (struct ip *)(packet + sizeof(struct ether_header));
+        const ip *ip_hdr = (ip *)(packet + sizeof(ether_header));
         std::cout << "  IP Src: " << inet_ntoa(ip_hdr->ip_src) << std::endl;
         std::cout << "  IP Dst: " << inet_ntoa(ip_hdr->ip_dst) << std::endl;
     }
@@ -101,7 +119,7 @@ pcap_t * EtherOpenDevice(pcap_if_t *devs, pcap_if_t *device, char *errbuf)
 
 void EtherSetFilter(pcap_t *handle, const char *filter_exp)
 {
-    struct bpf_program fp;
+    bpf_program fp;
     if (pcap_compile(handle, &fp, filter_exp, 0, PCAP_NETMASK_UNKNOWN) == -1) {
         std::cerr << "Couldn't parse filter: " << pcap_geterr(handle) << std::endl;
         pcap_close(handle);
@@ -128,7 +146,7 @@ pcap_dumper_t* EtherDumpOpen(pcap_if_t *devs, pcap_t *handle, const char *filena
     return dumper;
 }
 
-void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void (*callback)(u_char *, const struct pcap_pkthdr *, const u_char *), u_char *user_arg)
+void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void (*callback)(u_char *, const pcap_pkthdr *, const u_char *), u_char *user_arg)
 {
     if (callback == NULL)
         callback = PacketHandler_Printer;
