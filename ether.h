@@ -16,7 +16,6 @@
 #define ETHER_IP_LEN (sizeof(struct ip))
 #define ETHER_UDP_HEADER_LEN (sizeof(struct udphdr))
 #define ETHER_ICMP_HEADER_LEN (sizeof(struct icmphdr))
-
 #define ETHER_PAYLOAD_LEN (1500)
 #define ETHER_MAX_FRAME_LEN (ETHER_ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
 #define ETHER_COSTUME_ETHER_TYPE (0x88B5)
@@ -38,8 +37,8 @@ enum PROMISC
 
 enum MODE
 {
-    IP,
-    RAW_ETHER
+    IP_ICMP_ECHO,
+    ARP_REQUEST,
 };
 
 
@@ -197,7 +196,7 @@ void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void 
     }
 }
 
-void SendFrame(pcap_t * handle, uint8_t frame[], size_t frame_len)
+void EtherSendFrame(pcap_t * handle, uint8_t frame[], size_t frame_len)
 {
     // the `pcap_sendpacket` function or the NIC card sets the (Preamble, SFD, and FCS)
     if (pcap_sendpacket(handle, frame, frame_len) != 0) {
