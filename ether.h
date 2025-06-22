@@ -8,15 +8,18 @@
 #include <arpa/inet.h>
 #include <netinet/if_ether.h>
 #include <cstring>
+#include <netinet/ip_icmp.h>
 
 #define CallBackType(VariableName) void (*VariableName)(u_char *, const pcap_pkthdr *, const u_char *)
 
-#define ETHER_HEADER_LEN (sizeof(ether_header))
+#define ETHER_ETHER_HEADER_LEN (sizeof(ether_header))
 #define ETHER_IP_LEN (sizeof(struct ip))
 #define ETHER_UDP_HEADER_LEN (sizeof(struct udphdr))
+#define ETHER_ICMP_HEADER_LEN (sizeof(struct icmphdr))
+
 #define ETHER_PAYLOAD_LEN (1500)
-#define ETHER_MAX_FRAME_LEN (ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
-#define ETHER_ETHER_TYPE (0x88B5)
+#define ETHER_MAX_FRAME_LEN (ETHER_ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
+#define ETHER_COSTUME_ETHER_TYPE (0x88B5)
 
 #define PROTOCOL_MESSAGE_TYPE_LEN (5)
 #define PROTOCOL_MESSAGE_LENGTH_LEN (5)
@@ -96,9 +99,9 @@ void PacketHandler_Printer(u_char *user, const pcap_pkthdr *header, const u_char
     std::cout << "  Dst MAC: " << ether_ntoa((const ether_addr *)eth->ether_dhost) << std::endl;
     std::cout << "  EtherType: 0x" << std::hex << ntohs(eth->ether_type) << std::dec << std::endl;
     // Display payload (first 32 bytes or up to packet length)
-    int payload_len = header->len - ETHER_HEADER_LEN;
+    int payload_len = header->len - ETHER_ETHER_HEADER_LEN;
     std::cout << "  Payload (" << payload_len << " bytes): ";
-    const u_char* payload = packet + ETHER_HEADER_LEN;
+    const u_char* payload = packet + ETHER_ETHER_HEADER_LEN;
     printf("payload as string: `");
     for (int i = 0; i < payload_len; i++)
         printf("%c", payload[i]);
@@ -190,6 +193,16 @@ void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void 
         pcap_close(handle);
         if (devs)
             pcap_freealldevs(devs);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void SendFrame(pcap_t * handle, uint8_t frame[], size_t frame_len)
+{
+    // the `pcap_sendpacket` function or the NIC card sets the (Preamble, SFD, and FCS)
+    if (pcap_sendpacket(handle, frame, frame_len) != 0) {
+        fprintf(stderr, "pcap_sendpacket failed: %s\n", pcap_geterr(handle));
+        pcap_close(handle);
         exit(EXIT_FAILURE);
     }
 }
