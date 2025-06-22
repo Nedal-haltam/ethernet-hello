@@ -10,12 +10,11 @@ void PacketHandlerWriter(u_char *user, const pcap_pkthdr *h, const u_char *bytes
 int main(void)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_if_t * devs = EtherInitDevices();
-    pcap_if_t *device = devs;
-    std::cout << "Using device: " << device->name << std::endl;
-    pcap_t *handle = EtherOpenDevice(devs, device, errbuf);
+    const char* device = "eth0";
+    std::cout << "Using device: " << device << std::endl;
+    pcap_t *handle = EtherOpenDevice(NULL, device, errbuf, PROMISC::SNIFF);
 
-    // EtherPrintDevices(devs);
+    // EtherPrintDevices(EtherInitDevices());
     // return 0;
     // TODO: filter packets
     // bpf_program fp;
@@ -28,10 +27,10 @@ int main(void)
 #else
     PacketHandler = PacketHandlerWriter;
     const char *filename = "capture_output.pcap";
-    pcap_dumper_t *user_info = EtherDumpOpen(devs, handle, filename);
+    pcap_dumper_t *user_info = EtherDumpOpen(NULL, handle, filename);
 #endif
-    EtherCapturePackets(devs, handle, 50, PacketHandler, (u_char *)user_info);
+    EtherCapturePackets(NULL, handle, 20, PacketHandler, (u_char *)user_info);
 
-    EtherClose(devs, handle);
+    EtherClose(NULL, handle);
     return 0;
 }
