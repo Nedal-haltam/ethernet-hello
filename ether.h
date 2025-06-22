@@ -30,7 +30,7 @@ struct Protocol {
 
 enum PROMISC
 {
-    SEND, SNIFF
+    SEND, RECEIVE
 };
 
 enum MODE
