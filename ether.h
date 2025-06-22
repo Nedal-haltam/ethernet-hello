@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
 #include <pcap.h>
 #include <netinet/udp.h>  // for struct udphdr
 #include <netinet/ip.h>   // for struct ip
@@ -42,11 +43,88 @@ enum MODE
 };
 
 
+std::vector<uint8_t> HexStringToByteArray(const std::string& hexStr) {
+    std::string hex = hexStr;
+
+    // Remove "0x" or "0X" prefix if present
+    if (hex.substr(0, 2) == "0x" || hex.substr(0, 2) == "0X") {
+        hex = hex.substr(2);
+    }
+
+    // Make sure string has even length
+    if (hex.length() % 2 != 0) {
+        hex = "0" + hex;  // Pad with leading zero
+    }
+
+    std::vector<uint8_t> bytes;
+    for (size_t i = 0; i < hex.length(); i += 2) {
+        std::string byteStr = hex.substr(i, 2);
+        uint8_t byte = static_cast<uint8_t>(std::stoul(byteStr, nullptr, 16));
+        bytes.push_back(byte);
+    }
+
+    return bytes;
+}
+
+uint16_t checksum(uint16_t* data, int len) {
+    uint32_t sum = 0;
+    while (len > 1) {
+        sum += *data++;
+        len -= 2;
+    }
+    if (len == 1) {
+        sum += *(uint8_t*)data;
+    }
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    return (uint16_t)(~sum);
+}
+
 void EtherFillEtherHeader(ether_header *eth, uint8_t src_mac[], uint8_t dest_mac[], uint16_t ether_type)
 {
     memcpy(eth->ether_dhost, dest_mac, ETHER_ADDR_LEN);
     memcpy(eth->ether_shost, src_mac, ETHER_ADDR_LEN);
     eth->ether_type = htons(ether_type);
+}
+
+void EtherFillARPHeader(uint8_t* arp, uint8_t SourceMAC[], uint8_t SourceIP_bin[], uint8_t DestinationIP_bin[])
+{
+    arp[0]  = 0x00; arp[1]  = 0x01;        // Hardware type: Ethernet
+    arp[2]  = 0x08; arp[3]  = 0x00;        // Protocol type: IPv4
+    arp[4]  = 0x06;                        // Hardware size: 6
+    arp[5]  = 0x04;                        // Protocol size: 4
+    arp[6]  = 0x00; arp[7]  = 0x01;        // Opcode: request
+
+    memcpy(arp + 8,  SourceMAC,     6);      // Sender MAC
+    memcpy(arp + 14, SourceIP_bin,  4);      // Sender IP
+    memset(arp + 18, 0x00,        6);      // Target MAC (unknown)
+    memcpy(arp + 24, DestinationIP_bin,  4);      // Target IP
+}
+
+void EtherFillIPHeader(ip* iphdr, uint8_t IPProtocol, std::string payload, const char* SourceIP, const char* DestinationIP)
+{
+    iphdr->ip_hl = 5;
+    iphdr->ip_v = 4;
+    iphdr->ip_tos = 0;
+    iphdr->ip_len = htons(ETHER_IP_LEN + ETHER_ICMP_HEADER_LEN + payload.length());
+    iphdr->ip_id = htons(1234);
+    iphdr->ip_off = htons(IP_DF);
+    iphdr->ip_ttl = 64;
+    iphdr->ip_p = IPProtocol;
+    iphdr->ip_sum = 0;
+    iphdr->ip_src.s_addr = inet_addr(SourceIP);  // your IP
+    iphdr->ip_dst.s_addr = inet_addr(DestinationIP);    // target IP
+    iphdr->ip_sum = checksum((uint16_t*)iphdr, ETHER_IP_LEN);
+}
+
+void EtherFillICMPHeader(icmphdr* icmp, uint8_t ICMPType)
+{
+    icmp->type = ICMPType;
+    icmp->code = 0;
+    icmp->un.echo.id = htons(0x1234);
+    icmp->un.echo.sequence = htons(1);
+    icmp->checksum = 0;
 }
 
 void EtherFillProtocol(Protocol *proto, std::string payload)
