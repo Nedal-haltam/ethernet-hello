@@ -2,80 +2,90 @@
 #include <sstream>
 #include "ether.h"
 
-
-void SendFrame(pcap_t * handle, uint8_t frame[], size_t frame_len)
-{
-    // the `pcap_sendpacket` function or the NIC card sets the (Preamble, SFD, and FCS)
-    if (pcap_sendpacket(handle, frame, frame_len) != 0) {
-        fprintf(stderr, "pcap_sendpacket failed: %s\n", pcap_geterr(handle));
-        pcap_close(handle);
-        exit(EXIT_FAILURE);
-    }
-}
-
 void SendRawPacket(pcap_t* handle, uint8_t frame[], std::string payload, uint8_t src_mac[], uint8_t dest_mac[])
 {
     // Ethernet Header
     ether_header *eth = (ether_header *)frame;
-    EtherFillEtherHeader(eth, src_mac, dest_mac, ETHER_ETHER_TYPE);
+    EtherFillEtherHeader(eth, src_mac, dest_mac, ETHER_COSTUME_ETHER_TYPE);
 
     // Custom protocol header
-    Protocol *proto = (Protocol *)(frame + ETHER_HEADER_LEN);
+    Protocol *proto = (Protocol *)(frame + ETHER_ETHER_HEADER_LEN);
     EtherFillProtocol(proto, payload);
 
     // Payload
-    uint8_t *payload_ptr = frame + ETHER_HEADER_LEN + ETHER_PROTOCOL_LEN;
+    uint8_t *payload_ptr = frame + ETHER_ETHER_HEADER_LEN + ETHER_PROTOCOL_LEN;
     memcpy(payload_ptr, payload.c_str(), payload.length());
 
     // Total frame length
-    size_t frame_len = ETHER_HEADER_LEN + ETHER_PROTOCOL_LEN + payload.length();
+    size_t frame_len = ETHER_ETHER_HEADER_LEN + ETHER_PROTOCOL_LEN + payload.length();
     SendFrame(handle, frame, frame_len);
 }
 
-#define ETHER_TYPE_IP 0x0800
-void SendIPPacket(pcap_t* handle, uint8_t frame[], std::string payload, uint8_t src_mac[], uint8_t dest_mac[], const char* src_ip, const char* dst_ip)
+// Simple checksum function
+uint16_t checksum(uint16_t* data, int len) {
+    uint32_t sum = 0;
+    while (len > 1) {
+        sum += *data++;
+        len -= 2;
+    }
+    if (len == 1) {
+        sum += *(uint8_t*)data;
+    }
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    return (uint16_t)(~sum);
+}
+
+void SendIPPingPacket(pcap_t* handle, uint8_t frame[], std::string payload, uint8_t src_mac[], uint8_t dest_mac[], const char* src_ip, const char* dst_ip)
 {
     // Ethernet header
-    ether_header *eth = (ether_header *)frame;
-    EtherFillEtherHeader(eth, src_mac, dest_mac, ETHER_TYPE_IP);
+    ether_header* eth = (ether_header*)frame;
+    EtherFillEtherHeader(eth, src_mac, dest_mac, ETHERTYPE_IP);
 
     // IP header
-    struct ip *ip = (struct ip *)(frame + ETHER_HEADER_LEN);
-    ip->ip_hl = 5;
-    ip->ip_v = 4;
-    ip->ip_tos = 0;
-    ip->ip_len = htons(ETHER_IP_LEN + ETHER_UDP_HEADER_LEN + payload.length());
-    ip->ip_id = htons(54321);
-    ip->ip_off = 0;
-    ip->ip_ttl = 64;
-    ip->ip_p = IPPROTO_UDP;
-    ip->ip_sum = 0;  // Let’s skip checksum for simplicity
-    ip->ip_src.s_addr = inet_addr(src_ip);
-    ip->ip_dst.s_addr = inet_addr(dst_ip);
+    struct ip* iphdr = (struct ip*)(frame + ETHER_ETHER_HEADER_LEN);
+    iphdr->ip_hl = 5;
+    iphdr->ip_v = 4;
+    iphdr->ip_tos = 0;
+    iphdr->ip_len = htons(ETHER_IP_LEN + ETHER_ICMP_HEADER_LEN + payload.length());
+    iphdr->ip_id = htons(1234);
+    iphdr->ip_off = htons(IP_DF);
+    iphdr->ip_ttl = 64;
+    iphdr->ip_p = IPPROTO_ICMP;
+    iphdr->ip_sum = 0;
+    iphdr->ip_src.s_addr = inet_addr(src_ip);  // your IP
+    iphdr->ip_dst.s_addr = inet_addr(dst_ip);    // target IP
+    iphdr->ip_sum = checksum((uint16_t*)iphdr, ETHER_IP_LEN);
 
-    // UDP header
-    struct udphdr *udp = (struct udphdr *)(frame + ETHER_HEADER_LEN + ETHER_IP_LEN);
-    udp->uh_sport = htons(12345);
-    udp->uh_dport = htons(8080);
-    udp->uh_ulen = htons(ETHER_UDP_HEADER_LEN + payload.length());
-    udp->uh_sum = 0;
+    // ICMP Echo Request
+    struct icmphdr* icmp = (struct icmphdr*)(frame + ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN);
+    icmp->type = ICMP_ECHO;
+    icmp->code = 0;
+    icmp->un.echo.id = htons(0x1234);
+    icmp->un.echo.sequence = htons(1);
+    icmp->checksum = 0;
 
-    // UDP payload
-    uint8_t *payload_ptr = frame + ETHER_HEADER_LEN + ETHER_IP_LEN + ETHER_UDP_HEADER_LEN;
+    // Payload
+    uint8_t* payload_ptr = (uint8_t*)(icmp + 1);
     memcpy(payload_ptr, payload.c_str(), payload.length());
 
-    int frame_len = ETHER_HEADER_LEN + ETHER_IP_LEN + ETHER_UDP_HEADER_LEN + payload.length();
+    // Calculate ICMP checksum (header + payload)
+    int icmp_len = ETHER_ICMP_HEADER_LEN + payload.length();
+    icmp->checksum = checksum((uint16_t*)icmp, icmp_len);
+
+    int frame_len = ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN + icmp_len;
     SendFrame(handle, frame, frame_len);
 }
 
 const char* program_name;
 void usage()
 {
-    std::cout << "device is not provided\n";
-    std::cout << "Usage: " << program_name << " -d <device> [options]\n";
+    std::cout << "Error: Device is not provided.\n\n";
+    std::cout << "Usage: " << program_name << " -d <device> [options]\n\n";
     std::cout << "Options:\n";
-    std::cout << "    -mode <ip|raw>\n";
-    std::cout << "    -n <number of packets to send>\n";
+    std::cout << "  -mode <ip|raw>              Set transmission mode\n";
+    std::cout << "  -n <number>                 Number of packets to send\n";
     exit(EXIT_FAILURE);
 }
 
@@ -84,7 +94,7 @@ int main(int argc, char* argv[])
     int i = 0;
     program_name = argv[i];
     argc--; i++;
-    const char* device = NULL;
+    const char* device = EtherInitDevices()->name;
     MODE mode = MODE::RAW_ETHER;
     int NumberOfPackets = 20;
     while (argc > 0)
@@ -132,10 +142,6 @@ int main(int argc, char* argv[])
             }
         }
     }
-    if (!device)
-    {
-        usage();
-    }
     
 
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -143,11 +149,14 @@ int main(int argc, char* argv[])
     // const char *dev = "wlan0";  // Interface
     pcap_t *handle = EtherOpenDevice(NULL, device, errbuf, PROMISC::SEND);
 
+    // using command: `ip address`, these are from interface eth0
+    const char* src_ip = "172.30.160.245";
+    uint8_t src_mac[ETHER_ADDR_LEN]  = {0x00, 0x15, 0x5d, 0x0c, 0xdb, 0x26};
+    // from pinging the router's ip addresss `192.168.100.1` and running `arp -a 192.168.100.1` got the mac address
+    const char* dst_ip = "192.168.100.1";
+    // uint8_t dest_mac[ETHER_ADDR_LEN] = {0xd8, 0x76, 0xae, 0x51, 0x10, 0x44};
+    uint8_t dest_mac[ETHER_ADDR_LEN] = {0x00, 0x15, 0x5d, 0x5d, 0xc8, 0x1a};
 
-    uint8_t src_mac[ETHER_ADDR_LEN]  = {0x00, 0x15, 0x5D, 0x5D, 0xC8, 0x1A};
-    uint8_t dest_mac[ETHER_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    const char* src_ip = "192.168.1.10";
-    const char* dst_ip = "192.168.1.5";
 
     uint8_t frame[ETHER_MAX_FRAME_LEN] = {0};
 
@@ -156,7 +165,7 @@ int main(int argc, char* argv[])
         ss << "Hello, Router! Packet #" << (i + 1);
         std::string payload = ss.str();
         if (mode == MODE::IP)
-            SendIPPacket(handle, frame, payload, src_mac, dest_mac, src_ip, dst_ip);
+            SendIPPingPacket(handle, frame, payload, src_mac, dest_mac, src_ip, dst_ip);
         else if (mode == MODE::RAW_ETHER)
             SendRawPacket(handle, frame, payload, src_mac, dest_mac);
 
