@@ -9,10 +9,10 @@ void PacketHandlerWriter(u_char *user, const pcap_pkthdr *h, const u_char *bytes
 const char* program_name;
 void usage()
 {
-    std::cout << "device is not provided\n";
-    std::cout << "Usage: " << program_name << " -d <device> [options]\n"; 
+    std::cout << "Error: Device is not provided.\n\n";
+    std::cout << "Usage: " << program_name << " -d <device> [options]\n\n";
     std::cout << "Options:\n";
-    std::cout << "    -n <number of packets to receive>\n";
+    std::cout << "  -n <number>                 Number of packets to receive\n";
     exit(EXIT_FAILURE);
 }
 
@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     int i = 0;
     program_name = argv[i];
     argc--; i++;
-    const char* device = NULL;
+    const char* device = EtherInitDevices()->name;
     int NumberOfPackets = 20;
     while (argc > 0)
     {
@@ -52,10 +52,7 @@ int main(int argc, char* argv[])
             }
         }
     }
-    if (!device)
-    {
-        usage();
-    }
+
     char errbuf[PCAP_ERRBUF_SIZE];
     std::cout << "Using device: " << device << std::endl;
     pcap_t *handle = EtherOpenDevice(NULL, device, errbuf, PROMISC::RECEIVE);
