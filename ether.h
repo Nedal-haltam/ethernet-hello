@@ -38,6 +38,7 @@ enum PROMISC
 
 enum MODE
 {
+    INVALID,
     IP_ICMP_ECHO,
     ARP_REQUEST,
 };

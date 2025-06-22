@@ -3,14 +3,19 @@
 #include "ether.h"
 
 const char* program_name = NULL;
-const char* device = NULL;
-MODE mode = (MODE)0;
+MODE mode = MODE::INVALID;
 int NumberOfPackets = 0;
+
+const char* device = NULL;
 const char* SourceIP = NULL;
 const char* DestinationIP = NULL;
 uint8_t SourceMAC[ETHER_ADDR_LEN]  = {0};
 uint8_t DestinationMAC[ETHER_ADDR_LEN] = {0};
-
+bool GOT_device = false;
+bool GOT_SourceIP = false;
+bool GOT_DestinationIP = false;
+bool GOT_SourceMAC = false;
+bool GOT_DestinationMAC = false;
 
 void SendARPPacket(pcap_t* handle, uint8_t frame[]) {
     uint8_t broadcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -71,9 +76,25 @@ void usage()
 
 void ParseCommandLineArgs(int argc, char* argv[]);
 
+bool IsValidArgs()
+{
+    if (mode == MODE::INVALID || !GOT_device) return false;
+
+    if (mode == MODE::IP_ICMP_ECHO)
+    {
+        return GOT_SourceIP && GOT_DestinationIP && GOT_SourceMAC && GOT_DestinationMAC;
+    }
+    else if (mode == MODE::ARP_REQUEST)
+    {
+        return GOT_SourceIP && GOT_DestinationIP && GOT_SourceMAC; 
+    }
+    return false;
+}
+
 int main(int argc, char* argv[]) 
 {
     ParseCommandLineArgs(argc, argv);
+    if (!IsValidArgs()) return EXIT_FAILURE;
     
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle = EtherOpenDevice(NULL, device, errbuf, PROMISC::SEND);
@@ -118,6 +139,7 @@ void ParseCommandLineArgs(int argc, char* argv[])
             {
                 device = argv[i];
                 argc--; i++;
+                GOT_device = true;
             }
             else
             {
@@ -160,6 +182,7 @@ void ParseCommandLineArgs(int argc, char* argv[])
             {
                 SourceIP = argv[i];
                 argc--; i++;
+                GOT_SourceIP = true;
             }
             else
             {
@@ -173,6 +196,7 @@ void ParseCommandLineArgs(int argc, char* argv[])
             {
                 DestinationIP = argv[i];
                 argc--; i++;
+                GOT_DestinationIP = true;
             }
             else
             {
@@ -187,6 +211,7 @@ void ParseCommandLineArgs(int argc, char* argv[])
                 const char* MAC_text = argv[i];
                 memcpy(SourceMAC, HexStringToByteArray(MAC_text).data(), ETHER_ADDR_LEN);
                 argc--; i++;
+                GOT_SourceMAC = true;
             }
             else
             {
@@ -201,6 +226,7 @@ void ParseCommandLineArgs(int argc, char* argv[])
                 const char* MAC_text = argv[i];
                 memcpy(DestinationMAC, HexStringToByteArray(MAC_text).data(), ETHER_ADDR_LEN);
                 argc--; i++;
+                GOT_DestinationMAC = true;
             }
             else
             {
