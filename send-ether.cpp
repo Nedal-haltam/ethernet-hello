@@ -1,15 +1,6 @@
-#include <pcap.h>
 #include <iostream>
 #include <sstream>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <arpa/inet.h>
-#include <netinet/if_ether.h>
 #include "ether.h"
-#include <netinet/udp.h>  // for struct udphdr
-#include <netinet/ip.h>   // for struct ip
 
 
 void SendRawPacket(pcap_t* handle, uint8_t frame[], std::string payload, uint8_t src_mac[], uint8_t dest_mac[])

@@ -2,15 +2,14 @@
 
 #include <iostream>
 #include <pcap.h>
+#include <netinet/udp.h>  // for struct udphdr
+#include <netinet/ip.h>   // for struct ip
 #include <netinet/ether.h>
-#include <netinet/ip.h>
 #include <arpa/inet.h>
+#include <netinet/if_ether.h>
 #include <cstring>
 
 #define CallBackType(VariableName) void (*VariableName)(u_char *, const pcap_pkthdr *, const u_char *)
-
-// 8 + (6 + 6 + 2 + [PAYLOAD_LEN]) + 4
-// we construct: (6 + 6 + 2 + [PAYLOAD_LEN]) -> (14 + [PAYLOAD_LEN])
 
 #define ETHER_HEADER_LEN (sizeof(ether_header))
 #define ETHER_IP_LEN (sizeof(struct ip))
