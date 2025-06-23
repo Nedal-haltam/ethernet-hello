@@ -70,7 +70,7 @@ void usage()
     std::cout << "  -smac <mac address in hex>  source mac address\n";
     std::cout << "  -dmac <mac address in hex>  destination mac address\n";
     std::cout << "  -n <number>                 Number of packets to send\n";
-    std::cout << "example: " << program_name << " -d eth0 -mode echo -sip 192.168.10.10 -dip 192.168.20.20 -smac 0x112233445566 -dmac 0x112233445566 -n 10\n";
+    std::cout << "example: " << program_name << " -d eth0 -mode echo -sip 192.168.10.10 -dip 192.168.20.20 -smac 0x112233445566 -dmac 0x112233445566 -n 10\n\n";
     exit(EXIT_FAILURE);
 }
 
@@ -107,6 +107,7 @@ int main(int argc, char* argv[])
             SendARPPacket(handle, frame);
             memset(frame, 0, ETHER_MAX_FRAME_LEN);
         }
+        printf("Packets sent!\n");
     }
     else if (mode == MODE::IP_ICMP_ECHO)
     {
@@ -117,8 +118,8 @@ int main(int argc, char* argv[])
             SendIPPingPacket(handle, frame, payload);
             memset(frame, 0, ETHER_MAX_FRAME_LEN);
         }
+        printf("Packets sent!\n");
     }
-    printf("Packets sent!\n");
 
     pcap_close(handle);
     return 0;
@@ -232,6 +233,10 @@ void ParseCommandLineArgs(int argc, char* argv[])
             {
                 usage();
             }
+        }
+        else
+        {
+            usage();
         }
     }
 }

@@ -19,7 +19,7 @@ run-echo:
 
 # DestinationIP = "172.30.160.1";
 run-arp:
-	sudo ./send-ether -d eth0 -mode arpreq -sip 172.30.160.245 -dip 172.30.160.1 -smac 0x00155D0CDB26 -dmac 0x00155D0CD85E -n 1
+	sudo ./send-ether -d eth0 -mode arpreq -sip 172.30.160.245 -dip 172.30.160.1 -smac 0x00155D0CDB26 -n 1
 
 wire-shark:
 	wireshark capture_output.pcap
