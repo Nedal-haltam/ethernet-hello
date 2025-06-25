@@ -11,6 +11,17 @@
 #include <cstring>
 #include <netinet/ip_icmp.h>
 
+#include <iomanip>
+#include <crypto++/aes.h>
+#include <crypto++/gcm.h>
+#include <crypto++/osrng.h>
+#include <crypto++/filters.h>
+#include <crypto++/secblock.h>
+#include <fstream>
+
+using namespace CryptoPP;
+
+
 #define CallBackType(VariableName) void (*VariableName)(u_char *, const pcap_pkthdr *, const u_char *)
 
 #define ETHER_ETHER_HEADER_LEN (sizeof(ether_header))
@@ -20,6 +31,9 @@
 #define ETHER_PAYLOAD_LEN (1500)
 #define ETHER_MAX_FRAME_LEN (ETHER_ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
 #define ETHER_COSTUME_ETHER_TYPE (0x88B5)
+
+#define TAG_SIZE 16
+#define IV_LEN 12
 
 #define PROTOCOL_MESSAGE_TYPE_LEN (5)
 #define PROTOCOL_MESSAGE_LENGTH_LEN (5)
@@ -191,6 +205,10 @@ void PacketHandler_Printer(u_char *user, const pcap_pkthdr *header, const u_char
         std::cout << "  IP Src: " << inet_ntoa(ip_hdr->ip_src) << std::endl;
         std::cout << "  IP Dst: " << inet_ntoa(ip_hdr->ip_dst) << std::endl;
     }
+    else if (ntohs(eth->ether_type) == ETHER_COSTUME_ETHER_TYPE)
+    {
+
+    }
 
     std::cout << "  Packet size: " << header->len << " bytes" << std::endl;
     std::cout << "-----------------------------" << std::endl;
@@ -283,4 +301,145 @@ void EtherSendFrame(pcap_t * handle, uint8_t frame[], size_t frame_len)
         pcap_close(handle);
         exit(EXIT_FAILURE);
     }
+}
+
+
+std::string encrypt(std::string plain, SecByteBlock key, byte iv[IV_LEN], std::string aad)
+{
+    std::string cipher;
+    try {
+        GCM<AES>::Encryption enc;
+        enc.SetKeyWithIV(key, key.size(), iv, IV_LEN * sizeof(byte));
+
+        AuthenticatedEncryptionFilter ef(enc, new StringSink(cipher), false, TAG_SIZE);
+
+        ef.ChannelPut("AAD", reinterpret_cast<const byte*>(aad.data()), aad.length());
+        ef.ChannelMessageEnd("AAD");
+
+        ef.ChannelPut("", reinterpret_cast<const byte*>(plain.data()), plain.length());
+        ef.ChannelMessageEnd("");
+    } catch (const Exception& e) {
+        std::cerr << "Encryption error: " << e.what() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return cipher;
+}
+
+std::string decrypt(std::string cipher, SecByteBlock key, byte iv[IV_LEN], std::string aad)
+{
+    std::string recovered;
+    try 
+    {
+        GCM<AES>::Decryption dec;
+        dec.SetKeyWithIV(key, key.size(), iv, IV_LEN * sizeof(byte));
+
+        AuthenticatedDecryptionFilter df(dec, new StringSink(recovered), AuthenticatedDecryptionFilter::THROW_EXCEPTION, TAG_SIZE);
+
+        df.ChannelPut("AAD", (const byte*)aad.data(), aad.size());
+        df.ChannelMessageEnd("AAD");
+
+        df.ChannelPut("", (const byte*)cipher.data(), cipher.size());
+        df.ChannelMessageEnd("");
+    } 
+    catch (const Exception& e) 
+    {
+        std::cerr << "Decryption failed: " << e.what() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return recovered;
+}
+
+void PrintInfoString(std::string data, std::string name)
+{
+    std::cout << name << " length: `" << data.length() << "`" << std::endl;
+    std::cout << name << ":";
+    for (int i = 0; i < data.length(); i++)
+    {
+        std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                  << (static_cast<unsigned int>(static_cast<unsigned char>(data[i]))) << " ";
+    }
+    std::cout << std::dec << std::nouppercase << std::setfill(' ');
+    std::cout << std::endl;
+    std::cout << name << ": " << "`" << data << "`" << std::endl;
+}
+
+void encrypt_decrypt_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
+{
+    std::string payload = "abcdefghij";
+    std::string cipher = encrypt(payload, key, iv, aad);
+    std::string recovered = decrypt(cipher, key, iv, aad);
+
+    PrintInfoString(payload, "Payload");
+    std::cout << "---------------------------------------------------------" << std::endl;
+    PrintInfoString(cipher, "Cipher");
+    std::cout << "---------------------------------------------------------" << std::endl;
+    PrintInfoString(recovered, "Recovered");
+}
+
+void save(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
+{
+    std::ofstream out("key_iv_aad.bin", std::ios::binary);
+    if (!out) {
+        std::cerr << "❌ Failed to open file for writing key, IV, and AAD." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // Write key
+    out.write(reinterpret_cast<const char*>(key.data()), key.SizeInBytes());
+
+    // Write IV
+    out.write(reinterpret_cast<const char*>(iv), IV_LEN);
+
+    uint32_t aad_len = static_cast<uint32_t>(aad.size());
+    out.write(reinterpret_cast<const char*>(&aad_len), sizeof(aad_len));
+    out.write(aad.data(), aad_len);
+
+    out.close();
+    std::cout << "✅ Key, IV, and AAD saved successfully.\n";
+}
+
+void load(SecByteBlock& key, byte iv[IV_LEN], std::string& aad) {
+    std::ifstream in("key_iv_aad.bin", std::ios::binary);
+    if (!in) {
+        std::cerr << "❌ Failed to open file for reading key, IV, and AAD." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // Read key
+    in.read(reinterpret_cast<char*>(key.data()), key.size());
+
+    // Read IV
+    in.read(reinterpret_cast<char*>(iv), IV_LEN);
+
+    // Read AAD length and content
+    uint32_t aad_len = 0;
+    in.read(reinterpret_cast<char*>(&aad_len), sizeof(aad_len));
+    aad.resize(aad_len);
+    in.read(&aad[0], aad_len);
+
+    in.close();
+    std::cout << "✅ Key, IV, and AAD loaded successfully.\n";
+}
+
+void Printkeyivaad(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
+{
+    std::cout << "key: " << key.data() << std::endl;
+    std::cout << "key len: " << key.size() << std::endl;
+    std::cout << "iv: ";
+    for (int i = 0; i < IV_LEN; i++)
+        std::cout << iv[i];
+    std::cout << std::endl;
+    std::cout << "aad: " << aad << std::endl;
+}
+
+void save_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
+{
+    save(key, iv, aad);
+    Printkeyivaad(key, iv, aad);
+}
+
+void load_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
+{
+    load(key, iv, aad);
+    Printkeyivaad(key, iv, aad);
 }
