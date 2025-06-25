@@ -12,7 +12,7 @@ using namespace CryptoPP;
 typedef struct 
 {
     const char* program_name = NULL;
-    MODE mode = MODE::INVALID;
+    ether::MODE mode = ether::MODE::INVALID;
     int NumberOfPackets = 0;
 
     const char* device = NULL;
@@ -42,32 +42,32 @@ void SendARPPacket(pcap_t* handle, uint8_t frame[]) {
     memset(frame, 0, 42);
 
     ether_header* eth = (ether_header*)frame;
-    EtherFillEtherHeader(eth, config.SourceMAC, broadcast_mac, ETHERTYPE_ARP);
+    ether::FillEtherHeader(eth, config.SourceMAC, broadcast_mac, ETHERTYPE_ARP);
 
-    EtherFillARPHeader(frame + 14, config.SourceMAC, SourceIP_bin, DestinationIP_bin);
+    ether::FillARPHeader(frame + 14, config.SourceMAC, SourceIP_bin, DestinationIP_bin);
 
-    EtherSendFrame(handle, frame, 42);
+    ether::SendFrame(handle, frame, 42);
 }
 
 void SendIPPingPacket(pcap_t* handle, uint8_t frame[], std::string payload)
 {
     ether_header* eth = (ether_header*)frame;
-    EtherFillEtherHeader(eth, config.SourceMAC, config.DestinationMAC, ETHERTYPE_IP);
+    ether::FillEtherHeader(eth, config.SourceMAC, config.DestinationMAC, ETHERTYPE_IP);
 
-    struct ip* iphdr = (struct ip*)(frame + ETHER_ETHER_HEADER_LEN);
-    EtherFillIPHeader(iphdr, IPPROTO_ICMP, payload.length(), config.SourceIP, config.DestinationIP);
+    struct ip* iphdr = (struct ip*)(frame + ETHER_HEADER_LEN);
+    ether::FillIPHeader(iphdr, IPPROTO_ICMP, payload.length(), config.SourceIP, config.DestinationIP);
 
-    struct icmphdr* icmp = (struct icmphdr*)(frame + ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN);
-    EtherFillICMPHeader(icmp, ICMP_ECHO);
+    struct icmphdr* icmp = (struct icmphdr*)(frame + ETHER_HEADER_LEN + IP_LEN);
+    ether::FillICMPHeader(icmp, ICMP_ECHO);
 
     uint8_t* payload_ptr = (uint8_t*)(icmp + 1);
     memcpy(payload_ptr, payload.c_str(), payload.length());
 
-    int icmp_len = ETHER_ICMP_HEADER_LEN + payload.length();
-    icmp->checksum = checksum((uint16_t*)icmp, icmp_len);
+    int icmp_len = ICMP_HEADER_LEN + payload.length();
+    icmp->checksum = ether::checksum((uint16_t*)icmp, icmp_len);
 
-    int frame_len = ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN + icmp_len;
-    EtherSendFrame(handle, frame, frame_len);
+    int frame_len = ETHER_HEADER_LEN + IP_LEN + icmp_len;
+    ether::SendFrame(handle, frame, frame_len);
 }
 
 void usage();
@@ -75,13 +75,13 @@ void ParseCommandLineArgs(int argc, char* argv[]);
 
 bool IsValidArgs()
 {
-    if (config.mode == MODE::INVALID || !config.GOT_device) return false;
+    if (config.mode == ether::MODE::INVALID || !config.GOT_device) return false;
 
-    if (config.mode == MODE::IP_ICMP_ECHO)
+    if (config.mode == ether::MODE::IP_ICMP_ECHO)
     {
         return config.GOT_SourceIP && config.GOT_DestinationIP && config.GOT_SourceMAC && config.GOT_DestinationMAC;
     }
-    else if (config.mode == MODE::ARP_REQUEST)
+    else if (config.mode == ether::MODE::ARP_REQUEST)
     {
         return config.GOT_SourceIP && config.GOT_DestinationIP && config.GOT_SourceMAC; 
     }
@@ -95,26 +95,26 @@ int main(int argc, char* argv[])
         usage();
     
     char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t *handle = EtherOpenDevice(NULL, config.device, errbuf, PROMISC::SEND);
-    uint8_t frame[ETHER_MAX_FRAME_LEN] = {0};
+    pcap_t *handle = ether::OpenDevice(NULL, config.device, errbuf, ether::PROMISC::SEND);
+    uint8_t frame[MAX_FRAME_LEN] = {0};
 
-    if (config.mode == MODE::ARP_REQUEST)
+    if (config.mode == ether::MODE::ARP_REQUEST)
     {
         for (int i = 0; i < config.NumberOfPackets; i++)
         {
             SendARPPacket(handle, frame);
-            memset(frame, 0, ETHER_MAX_FRAME_LEN);
+            memset(frame, 0, MAX_FRAME_LEN);
         }
         printf("Packets sent!\n");
     }
-    else if (config.mode == MODE::IP_ICMP_ECHO)
+    else if (config.mode == ether::MODE::IP_ICMP_ECHO)
     {
         SecByteBlock key(AES::DEFAULT_KEYLENGTH);
         byte iv[IV_LEN];
         std::string aad;
         if (config.MACSEC_AES_GCM_ENCRYPT)
         {
-            load(key, iv, aad, "key_iv_aad.bin");
+            ether::load(key, iv, aad, "key_iv_aad.bin");
         }
         for (int i = 0; i < config.NumberOfPackets; i++) {
             // TODO: change payload to uint8_t[]
@@ -127,16 +127,16 @@ int main(int argc, char* argv[])
                 // if MACSEC_AES_GCM_ENCRYPT flag was raised
                 // ciphertext = encrypt(payload)
                 // payload = [IV (12 bytes)] [ciphertext + tag (TAG_LEN bytes)]
-                std::string cipher = encrypt(plain, key, iv, aad);
+                std::string cipher = ether::encrypt(plain, key, iv, aad);
                 std::string IV(reinterpret_cast<const char*>(iv), IV_LEN);
-                payload = ETHER_MAGIC_MACSEC_WORD + IV + cipher;
+                payload = MAGIC_MACSEC_WORD + IV + cipher;
             }
             else
             {
                 payload = plain;
             }
             SendIPPingPacket(handle, frame, payload);
-            memset(frame, 0, ETHER_MAX_FRAME_LEN);
+            memset(frame, 0, MAX_FRAME_LEN);
         }
         printf("Packets sent!\n");
     }
@@ -191,11 +191,11 @@ void ParseCommandLineArgs(int argc, char* argv[])
             {
                 if (strcmp(argv[i], "echo") == 0)
                 {
-                    config.mode = MODE::IP_ICMP_ECHO;
+                    config.mode = ether::MODE::IP_ICMP_ECHO;
                 }
                 else if (strcmp(argv[i], "arpreq") == 0)
                 {
-                    config.mode = MODE::ARP_REQUEST;
+                    config.mode = ether::MODE::ARP_REQUEST;
                 }
                 argc--; i++;
             }
@@ -251,7 +251,7 @@ void ParseCommandLineArgs(int argc, char* argv[])
             if (argc >= 1)
             {
                 const char* MAC_text = argv[i];
-                memcpy(config.SourceMAC, HexStringToByteArray(MAC_text).data(), ETHER_ADDR_LEN);
+                memcpy(config.SourceMAC, ether::HexStringToByteArray(MAC_text).data(), ETHER_ADDR_LEN);
                 argc--; i++;
                 config.GOT_SourceMAC = true;
             }
@@ -266,7 +266,7 @@ void ParseCommandLineArgs(int argc, char* argv[])
             if (argc >= 1)
             {
                 const char* MAC_text = argv[i];
-                memcpy(config.DestinationMAC, HexStringToByteArray(MAC_text).data(), ETHER_ADDR_LEN);
+                memcpy(config.DestinationMAC, ether::HexStringToByteArray(MAC_text).data(), ETHER_ADDR_LEN);
                 argc--; i++;
                 config.GOT_DestinationMAC = true;
             }
