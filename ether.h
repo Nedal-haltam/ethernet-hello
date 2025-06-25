@@ -24,8 +24,8 @@ using namespace CryptoPP;
 #define CallBackType(VariableName) void (*VariableName)(u_char *, const pcap_pkthdr *, const u_char *)
 
 #define ETHER_ETHER_HEADER_LEN (sizeof(ether_header))
-#define ETHER_IP_LEN (sizeof(struct ip))
 #define ETHER_UDP_HEADER_LEN (sizeof(struct udphdr))
+#define ETHER_IP_LEN (sizeof(struct ip))
 #define ETHER_ICMP_HEADER_LEN (sizeof(struct icmphdr))
 #define ETHER_PAYLOAD_LEN (1500)
 #define ETHER_MAX_FRAME_LEN (ETHER_ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
@@ -179,37 +179,6 @@ void EtherPrintDevices(pcap_if_t *devs)
     }
 }
 
-void PacketHandler_Printer(u_char *user, const pcap_pkthdr *header, const u_char *packet) {
-    static int counter = 1;
-    const char* user_info = reinterpret_cast<const char*>(user);
-    
-    const ether_header *eth = (ether_header *)packet;
-    std::cout << "Packet No." << counter++ << std::endl;
-    std::cout << "[User Info]: " << user_info << std::endl;
-    std::cout << "Ethernet Frame:" << std::endl;
-    std::cout << "  Src MAC: " << ether_ntoa((const ether_addr *)eth->ether_shost) << std::endl;
-    std::cout << "  Dst MAC: " << ether_ntoa((const ether_addr *)eth->ether_dhost) << std::endl;
-    std::cout << "  EtherType: 0x" << std::hex << ntohs(eth->ether_type) << std::dec << std::endl;
-
-    int payload_len = header->len - ETHER_ETHER_HEADER_LEN;
-    std::cout << "  Payload (" << payload_len << " bytes): ";
-    const u_char* payload = packet + ETHER_ETHER_HEADER_LEN;
-    printf("payload as string: `");
-    for (int i = 0; i < payload_len; i++)
-        printf("%c", payload[i]);
-    printf("`\n");
-
-    std::cout << std::endl;
-    if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
-        const ip *ip_hdr = (ip *)(packet + sizeof(ether_header));
-        std::cout << "  IP Src: " << inet_ntoa(ip_hdr->ip_src) << std::endl;
-        std::cout << "  IP Dst: " << inet_ntoa(ip_hdr->ip_dst) << std::endl;
-    }
-
-    std::cout << "  Packet size: " << header->len << " bytes" << std::endl;
-    std::cout << "-----------------------------" << std::endl;
-}
-
 pcap_if_t* EtherInitDevices()
 {
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -276,19 +245,6 @@ pcap_dumper_t* EtherDumpOpen(pcap_if_t *devs, pcap_t *handle, const char *filena
     return dumper;
 }
 
-void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void (*callback)(u_char *, const pcap_pkthdr *, const u_char *), u_char *user_arg)
-{
-    if (callback == NULL)
-        callback = PacketHandler_Printer;
-    if (pcap_loop(handle, num_packets, callback, user_arg) < 0) {
-        std::cerr << "Error capturing packets: " << pcap_geterr(handle) << std::endl;
-        pcap_close(handle);
-        if (devs)
-            pcap_freealldevs(devs);
-        exit(EXIT_FAILURE);
-    }
-}
-
 void EtherSendFrame(pcap_t * handle, uint8_t frame[], size_t frame_len)
 {
     // the `pcap_sendpacket` function or the NIC card sets the (Preamble, SFD, and FCS)
@@ -321,7 +277,7 @@ std::string encrypt(std::string plain, SecByteBlock key, byte iv[IV_LEN], std::s
     return cipher;
 }
 
-std::string decrypt(std::string cipher, SecByteBlock key, byte iv[IV_LEN], std::string aad)
+std::string decrypt(std::string cipher, SecByteBlock key, byte* iv, std::string aad)
 {
     std::string recovered;
     try 
@@ -438,4 +394,64 @@ void load_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
 {
     load(key, iv, aad, "key_iv_aad.bin");
     Printkeyivaad(key, iv, aad);
+}
+
+void PacketHandler_Printer(u_char *user, const pcap_pkthdr *header, const u_char *packet) {
+    static int counter = 1;
+    const char* user_info = reinterpret_cast<const char*>(user);
+    
+    const ether_header *eth = (ether_header *)packet;
+    std::cout << "Packet No." << counter++ << std::endl;
+    std::cout << "[User Info]: " << user_info << std::endl;
+    std::cout << "Ethernet Frame:" << std::endl;
+    std::cout << "  Src MAC: " << ether_ntoa((const ether_addr *)eth->ether_shost) << std::endl;
+    std::cout << "  Dst MAC: " << ether_ntoa((const ether_addr *)eth->ether_dhost) << std::endl;
+    std::cout << "  EtherType: 0x" << std::hex << ntohs(eth->ether_type) << std::dec << std::endl;
+    if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
+        const ip *ip_hdr = (ip *)(packet + sizeof(ether_header));
+        std::cout << "  IP Src: " << inet_ntoa(ip_hdr->ip_src) << std::endl;
+        std::cout << "  IP Dst: " << inet_ntoa(ip_hdr->ip_dst) << std::endl;
+        
+        int payload_len = (header->len - (ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN + ETHER_ICMP_HEADER_LEN));
+        const u_char* payload = (packet + ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN + ETHER_ICMP_HEADER_LEN);
+        std::string magicword(reinterpret_cast<const char*>(payload), 11);
+        if (magicword == ETHER_MAGIC_MACSEC_WORD)
+        {
+            payload += 11;
+            payload_len -= 11;
+            // here we are pointing at [IV][cipher + tag]
+            std::cout << "  Payload (" << payload_len << " bytes): ";
+            printf("payload as string: `");
+            for (int i = 0; i < payload_len; i++)
+                printf("%c", payload[i]);
+            printf("`\n");
+            byte *iv = (byte *)payload;
+            byte *ciphertext = (byte *)(payload + 12);
+            size_t ciphertext_len = payload_len - 12;
+            std::string cipher(reinterpret_cast<const char*>(ciphertext), ciphertext_len);
+
+            SecByteBlock key(AES::DEFAULT_KEYLENGTH);
+            byte ivtemp[IV_LEN];
+            std::string aad;
+            load(key, ivtemp, aad, "key_iv_aad.bin");
+            std::string plain = decrypt(cipher, key, iv, aad);
+            std::cout << "the plain is : " << plain << std::endl;
+        }
+    }
+
+    std::cout << "  Packet size: " << header->len << " bytes" << std::endl;
+    std::cout << "-----------------------------" << std::endl;
+}
+
+void EtherCapturePackets(pcap_if_t *devs, pcap_t *handle, int num_packets, void (*callback)(u_char *, const pcap_pkthdr *, const u_char *), u_char *user_arg)
+{
+    if (callback == NULL)
+        callback = PacketHandler_Printer;
+    if (pcap_loop(handle, num_packets, callback, user_arg) < 0) {
+        std::cerr << "Error capturing packets: " << pcap_geterr(handle) << std::endl;
+        pcap_close(handle);
+        if (devs)
+            pcap_freealldevs(devs);
+        exit(EXIT_FAILURE);
+    }
 }
