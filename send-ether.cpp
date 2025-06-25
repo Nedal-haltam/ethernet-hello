@@ -11,24 +11,24 @@ using namespace CryptoPP;
 
 typedef struct 
 {
-    const char* program_name = NULL;
-    ether::MODE mode = ether::MODE::INVALID;
-    int NumberOfPackets = 0;
+    const char* program_name;
+    ether::MODE mode;
+    int NumberOfPackets;
 
-    const char* device = NULL;
-    const char* SourceIP = NULL;
-    const char* DestinationIP = NULL;
-    uint8_t SourceMAC[ETHER_ADDR_LEN]  = {0};
-    uint8_t DestinationMAC[ETHER_ADDR_LEN] = {0};
-    bool GOT_device = false;
-    bool GOT_SourceIP = false;
-    bool GOT_DestinationIP = false;
-    bool GOT_SourceMAC = false;
-    bool GOT_DestinationMAC = false;
-    bool MACSEC_AES_GCM_ENCRYPT = false;
+    const char* device;
+    const char* SourceIP;
+    const char* DestinationIP;
+    uint8_t SourceMAC[ETHER_ADDR_LEN] ;
+    uint8_t DestinationMAC[ETHER_ADDR_LEN];
+    bool GOT_device;
+    bool GOT_SourceIP;
+    bool GOT_DestinationIP;
+    bool GOT_SourceMAC;
+    bool GOT_DestinationMAC;
+    bool MACSEC_AES_GCM_ENCRYPT;
 } Config;
 
-Config config = {0};
+Config config;
 
 
 
@@ -75,7 +75,7 @@ void ParseCommandLineArgs(int argc, char* argv[]);
 
 bool IsValidArgs()
 {
-    if (config.mode == ether::MODE::INVALID || !config.GOT_device) return false;
+    if (!config.GOT_device) return false;
 
     if (config.mode == ether::MODE::IP_ICMP_ECHO)
     {
@@ -196,6 +196,10 @@ void ParseCommandLineArgs(int argc, char* argv[])
                 else if (strcmp(argv[i], "arpreq") == 0)
                 {
                     config.mode = ether::MODE::ARP_REQUEST;
+                }
+                else
+                {
+                    usage();
                 }
                 argc--; i++;
             }

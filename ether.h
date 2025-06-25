@@ -54,7 +54,6 @@ namespace ether
 
     typedef enum
     {
-        INVALID,
         IP_ICMP_ECHO,
         ARP_REQUEST,
     } MODE;
