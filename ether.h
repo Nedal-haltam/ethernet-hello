@@ -3,8 +3,8 @@
 #include <iostream>
 #include <vector>
 #include <pcap.h>
-#include <netinet/udp.h>  // for struct udphdr
-#include <netinet/ip.h>   // for struct ip
+#include <netinet/udp.h>  
+#include <netinet/ip.h>   
 #include <netinet/ether.h>
 #include <arpa/inet.h>
 #include <netinet/if_ether.h>
@@ -21,7 +21,6 @@
 
 using namespace CryptoPP;
 
-
 #define CallBackType(VariableName) void (*VariableName)(u_char *, const pcap_pkthdr *, const u_char *)
 
 #define ETHER_ETHER_HEADER_LEN (sizeof(ether_header))
@@ -32,6 +31,7 @@ using namespace CryptoPP;
 #define ETHER_MAX_FRAME_LEN (ETHER_ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
 #define ETHER_COSTUME_ETHER_TYPE (0x88B5)
 
+#define ETHER_MAGIC_MACSEC_WORD "MAGICMACSEC"
 #define TAG_LEN 16
 #define IV_LEN 12
 
@@ -61,14 +61,14 @@ enum MODE
 std::vector<uint8_t> HexStringToByteArray(const std::string& hexStr) {
     std::string hex = hexStr;
 
-    // Remove "0x" or "0X" prefix if present
+    
     if (hex.substr(0, 2) == "0x" || hex.substr(0, 2) == "0X") {
         hex = hex.substr(2);
     }
 
-    // Make sure string has even length
+    
     if (hex.length() % 2 != 0) {
-        hex = "0" + hex;  // Pad with leading zero
+        hex = "0" + hex;  
     }
 
     std::vector<uint8_t> bytes;
@@ -190,7 +190,7 @@ void PacketHandler_Printer(u_char *user, const pcap_pkthdr *header, const u_char
     std::cout << "  Src MAC: " << ether_ntoa((const ether_addr *)eth->ether_shost) << std::endl;
     std::cout << "  Dst MAC: " << ether_ntoa((const ether_addr *)eth->ether_dhost) << std::endl;
     std::cout << "  EtherType: 0x" << std::hex << ntohs(eth->ether_type) << std::dec << std::endl;
-    // Display payload (first 32 bytes or up to packet length)
+
     int payload_len = header->len - ETHER_ETHER_HEADER_LEN;
     std::cout << "  Payload (" << payload_len << " bytes): ";
     const u_char* payload = packet + ETHER_ETHER_HEADER_LEN;
@@ -205,10 +205,6 @@ void PacketHandler_Printer(u_char *user, const pcap_pkthdr *header, const u_char
         std::cout << "  IP Src: " << inet_ntoa(ip_hdr->ip_src) << std::endl;
         std::cout << "  IP Dst: " << inet_ntoa(ip_hdr->ip_dst) << std::endl;
     }
-    else if (ntohs(eth->ether_type) == ETHER_COSTUME_ETHER_TYPE)
-    {
-
-    }
 
     std::cout << "  Packet size: " << header->len << " bytes" << std::endl;
     std::cout << "-----------------------------" << std::endl;
@@ -218,7 +214,7 @@ pcap_if_t* EtherInitDevices()
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t *devs;
-    // Get a list of devices
+
     if (pcap_findalldevs(&devs, errbuf) == -1) {
         std::cerr << "Error finding devices: " << errbuf << std::endl;
         exit(EXIT_FAILURE);
@@ -376,9 +372,9 @@ void encrypt_decrypt_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& 
     PrintInfoString(recovered, "Recovered");
 }
 
-void save(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
+void save(SecByteBlock& key, byte iv[IV_LEN], std::string& aad, const char* FilePath)
 {
-    std::ofstream out("key_iv_aad.bin", std::ios::binary);
+    std::ofstream out(FilePath, std::ios::binary);
     if (!out) {
         std::cerr << "❌ Failed to open file for writing key, IV, and AAD." << std::endl;
         exit(EXIT_FAILURE);
@@ -398,8 +394,8 @@ void save(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
     std::cout << "✅ Key, IV, and AAD saved successfully.\n";
 }
 
-void load(SecByteBlock& key, byte iv[IV_LEN], std::string& aad) {
-    std::ifstream in("key_iv_aad.bin", std::ios::binary);
+void load(SecByteBlock& key, byte iv[IV_LEN], std::string& aad, const char* FilePath) {
+    std::ifstream in(FilePath, std::ios::binary);
     if (!in) {
         std::cerr << "❌ Failed to open file for reading key, IV, and AAD." << std::endl;
         exit(EXIT_FAILURE);
@@ -434,12 +430,12 @@ void Printkeyivaad(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
 
 void save_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
 {
-    save(key, iv, aad);
+    save(key, iv, aad, "key_iv_aad.bin");
     Printkeyivaad(key, iv, aad);
 }
 
 void load_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
 {
-    load(key, iv, aad);
+    load(key, iv, aad, "key_iv_aad.bin");
     Printkeyivaad(key, iv, aad);
 }

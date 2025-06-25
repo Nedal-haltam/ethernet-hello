@@ -109,17 +109,32 @@ int main(int argc, char* argv[])
     }
     else if (config.mode == MODE::IP_ICMP_ECHO)
     {
+        SecByteBlock key(AES::DEFAULT_KEYLENGTH);
+        byte iv[IV_LEN];
+        std::string aad;
+        if (config.MACSEC_AES_GCM_ENCRYPT)
+        {
+            load(key, iv, aad, "key_iv_aad.bin");
+        }
         for (int i = 0; i < config.NumberOfPackets; i++) {
             // TODO: change payload to uint8_t[]
+            std::string payload;
             std::stringstream ss;
             ss << "Hello, Router! Packet #" << (i + 1);
-            std::string payload = ss.str();
+            std::string plain = ss.str();
             if (config.MACSEC_AES_GCM_ENCRYPT)
             {
-                // if encrypt flag was raised
+                // if MACSEC_AES_GCM_ENCRYPT flag was raised
                 // ciphertext = encrypt(payload)
                 // payload = [IV (12 bytes)] [ciphertext + tag (TAG_LEN bytes)]
-                
+                std::string cipher = encrypt(plain, key, iv, aad);
+                std::string IV(reinterpret_cast<const char*>(iv), IV_LEN);
+                payload = ETHER_MAGIC_MACSEC_WORD + cipher;
+                std::cout << payload.length();
+            }
+            else
+            {
+                payload = plain;
             }
             SendIPPingPacket(handle, frame, payload);
             memset(frame, 0, ETHER_MAX_FRAME_LEN);
