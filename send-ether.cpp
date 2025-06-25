@@ -25,6 +25,7 @@ typedef struct
     bool GOT_DestinationIP = false;
     bool GOT_SourceMAC = false;
     bool GOT_DestinationMAC = false;
+    bool MACSEC_AES_GCM_ENCRYPT = false;
 } Config;
 
 Config config = {0};
@@ -59,9 +60,6 @@ void SendIPPingPacket(pcap_t* handle, uint8_t frame[], std::string payload)
     struct icmphdr* icmp = (struct icmphdr*)(frame + ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN);
     EtherFillICMPHeader(icmp, ICMP_ECHO);
 
-    // `memcpy` the IV to the frame before the cipher
-    // memcpy(frame + sizeof(struct ether_header), cipher.data(), cipher.length());
-
     uint8_t* payload_ptr = (uint8_t*)(icmp + 1);
     memcpy(payload_ptr, payload.c_str(), payload.length());
 
@@ -72,21 +70,7 @@ void SendIPPingPacket(pcap_t* handle, uint8_t frame[], std::string payload)
     EtherSendFrame(handle, frame, frame_len);
 }
 
-void usage()
-{
-    std::cout << "Error: Device is not provided.\n\n";
-    std::cout << "Usage: " << config.program_name << " -d <device> [options]\n\n";
-    std::cout << "Options:\n";
-    std::cout << "  -mode <echo|arpreq>         Set transmission mode\n";
-    std::cout << "  -sip <ip address>           source ip address\n";
-    std::cout << "  -dip <ip address>           destination ip address\n";
-    std::cout << "  -smac <mac address in hex>  source mac address\n";
-    std::cout << "  -dmac <mac address in hex>  destination mac address\n";
-    std::cout << "  -n <number>                 Number of packets to send\n";
-    std::cout << "example: " << config.program_name << " -d eth0 -mode echo -sip 192.168.10.10 -dip 192.168.20.20 -smac 0x112233445566 -dmac 0x112233445566 -n 10\n\n";
-    exit(EXIT_FAILURE);
-}
-
+void usage();
 void ParseCommandLineArgs(int argc, char* argv[]);
 
 bool IsValidArgs()
@@ -130,6 +114,13 @@ int main(int argc, char* argv[])
             std::stringstream ss;
             ss << "Hello, Router! Packet #" << (i + 1);
             std::string payload = ss.str();
+            if (config.MACSEC_AES_GCM_ENCRYPT)
+            {
+                // if encrypt flag was raised
+                // ciphertext = encrypt(payload)
+                // payload = [IV (12 bytes)] [ciphertext + tag (TAG_LEN bytes)]
+                
+            }
             SendIPPingPacket(handle, frame, payload);
             memset(frame, 0, ETHER_MAX_FRAME_LEN);
         }
@@ -140,6 +131,23 @@ int main(int argc, char* argv[])
     return 0;
 }
 
+void usage()
+{
+    std::cout << "Error: Device is not provided.\n" << std::endl;
+    std::cout << "Usage: " << config.program_name << " -d <device> [options]\n" << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  -mode <echo|arpreq>         Set transmission mode" << std::endl;
+    std::cout << "  -sip <ip address>           source ip address" << std::endl;
+    std::cout << "  -dip <ip address>           destination ip address" << std::endl;
+    std::cout << "  -smac <mac address in hex>  source mac address" << std::endl;
+    std::cout << "  -dmac <mac address in hex>  destination mac address" << std::endl;
+    std::cout << "  -n <number>                 Number of packets to send" << std::endl;
+    std::cout << "  -macsec                     enable payload encryption using AES-GCM scheme" << std::endl;
+    std::cout << "                              default is disabled" << std::endl;
+
+    std::cout << "example: " << config.program_name << " -d eth0 -mode echo -sip 192.168.10.10 -dip 192.168.20.20 -smac 0x112233445566 -dmac 0x112233445566 -n 10\n" << std::endl;
+    exit(EXIT_FAILURE);
+}
 
 void ParseCommandLineArgs(int argc, char* argv[])
 {
@@ -252,6 +260,11 @@ void ParseCommandLineArgs(int argc, char* argv[])
             {
                 usage();
             }
+        }
+        else if (strcmp(argv[i], "-macsec") == 0)
+        {
+            argc--; i++;
+            config.MACSEC_AES_GCM_ENCRYPT = true;
         }
         else
         {

@@ -32,7 +32,7 @@ using namespace CryptoPP;
 #define ETHER_MAX_FRAME_LEN (ETHER_ETHER_HEADER_LEN + ETHER_PAYLOAD_LEN)
 #define ETHER_COSTUME_ETHER_TYPE (0x88B5)
 
-#define TAG_SIZE 16
+#define TAG_LEN 16
 #define IV_LEN 12
 
 #define PROTOCOL_MESSAGE_TYPE_LEN (5)
@@ -311,7 +311,7 @@ std::string encrypt(std::string plain, SecByteBlock key, byte iv[IV_LEN], std::s
         GCM<AES>::Encryption enc;
         enc.SetKeyWithIV(key, key.size(), iv, IV_LEN * sizeof(byte));
 
-        AuthenticatedEncryptionFilter ef(enc, new StringSink(cipher), false, TAG_SIZE);
+        AuthenticatedEncryptionFilter ef(enc, new StringSink(cipher), false, TAG_LEN);
 
         ef.ChannelPut("AAD", reinterpret_cast<const byte*>(aad.data()), aad.length());
         ef.ChannelMessageEnd("AAD");
@@ -333,7 +333,7 @@ std::string decrypt(std::string cipher, SecByteBlock key, byte iv[IV_LEN], std::
         GCM<AES>::Decryption dec;
         dec.SetKeyWithIV(key, key.size(), iv, IV_LEN * sizeof(byte));
 
-        AuthenticatedDecryptionFilter df(dec, new StringSink(recovered), AuthenticatedDecryptionFilter::THROW_EXCEPTION, TAG_SIZE);
+        AuthenticatedDecryptionFilter df(dec, new StringSink(recovered), AuthenticatedDecryptionFilter::THROW_EXCEPTION, TAG_LEN);
 
         df.ChannelPut("AAD", (const byte*)aad.data(), aad.size());
         df.ChannelMessageEnd("AAD");
@@ -353,7 +353,7 @@ void PrintInfoString(std::string data, std::string name)
 {
     std::cout << name << " length: `" << data.length() << "`" << std::endl;
     std::cout << name << ":";
-    for (int i = 0; i < data.length(); i++)
+    for (int i = 0; i < (int)data.length(); i++)
     {
         std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
                   << (static_cast<unsigned int>(static_cast<unsigned char>(data[i]))) << " ";
