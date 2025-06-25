@@ -29,10 +29,8 @@ void SendARPPacket(pcap_t* handle, uint8_t frame[]) {
     ether_header* eth = (ether_header*)frame;
     EtherFillEtherHeader(eth, SourceMAC, broadcast_mac, ETHERTYPE_ARP);
 
-    // ARP header
     EtherFillARPHeader(frame + 14, SourceMAC, SourceIP_bin, DestinationIP_bin);
 
-    // Send the packet
     EtherSendFrame(handle, frame, 42);
 }
 
@@ -47,11 +45,9 @@ void SendIPPingPacket(pcap_t* handle, uint8_t frame[], std::string payload)
     struct icmphdr* icmp = (struct icmphdr*)(frame + ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN);
     EtherFillICMPHeader(icmp, ICMP_ECHO);
 
-    // Payload
     uint8_t* payload_ptr = (uint8_t*)(icmp + 1);
     memcpy(payload_ptr, payload.c_str(), payload.length());
 
-    // Calculate ICMP checksum (header + payload)
     int icmp_len = ETHER_ICMP_HEADER_LEN + payload.length();
     icmp->checksum = checksum((uint16_t*)icmp, icmp_len);
 

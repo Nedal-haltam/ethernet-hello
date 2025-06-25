@@ -1,9 +1,9 @@
-.PHONY: all build-receive-ether build-send-ether run-echo run-arp wire-shark
+.PHONY: all build-receive-ether build-send-ether build-aes-gcm run-echo run-arp wire-shark
 
 CXX := g++
 CXXFLAGS := -Wall -Wextra -O2
 
-all: build-receive-ether build-send-ether
+all: build-receive-ether build-send-ether build-aes-gcm
 	@echo "✅ Built successfully."
 
 build-receive-ether: receive-ether.cpp
@@ -13,6 +13,10 @@ build-receive-ether: receive-ether.cpp
 build-send-ether: send-ether.cpp
 	@echo "🔧 Building send-ether..."
 	$(CXX) $(CXXFLAGS) -o send-ether send-ether.cpp -lpcap
+
+build-aes-gcm: aes-gcm.cpp
+	@echo "🔧 Building aes-gcm..."
+	$(CXX) $(CXXFLAGS) -o aes-gcm aes-gcm.cpp -lcryptopp
 
 run-echo:
 	sudo ./send-ether -d eth0 -mode echo -sip 172.30.160.245 -dip 192.168.100.1 -smac 0x00155D0CDB26 -dmac 0x00155D0CD85E -n 10
