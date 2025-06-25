@@ -112,6 +112,7 @@ int main(int argc, char* argv[])
     else if (mode == MODE::IP_ICMP_ECHO)
     {
         for (int i = 0; i < NumberOfPackets; i++) {
+            // TODO: change payload to uint8_t[]
             std::stringstream ss;
             ss << "Hello, Router! Packet #" << (i + 1);
             std::string payload = ss.str();
