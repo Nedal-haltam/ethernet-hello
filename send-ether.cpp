@@ -1,10 +1,5 @@
 #include <iostream>
 #include <sstream>
-#include <crypto++/aes.h>
-#include <crypto++/gcm.h>
-#include <crypto++/osrng.h>
-#include <crypto++/filters.h>
-#include <crypto++/secblock.h>
 #include "ether.h"
 
 using namespace CryptoPP;

@@ -1,10 +1,11 @@
 
 *
+!*/
 !.gitignore
 !.gitattributes
-!*/
-!/hw/*
-!*.cpp
-!*.h
 !Makefile
 !README.md
+!*.cpp
+!*.h
+!*.bin
+!/hw/*
