@@ -103,12 +103,12 @@ void EtherFillARPHeader(uint8_t* arp, uint8_t SourceMAC[], uint8_t SourceIP_bin[
     memcpy(arp + 24, DestinationIP_bin,  4);      // Target IP
 }
 
-void EtherFillIPHeader(ip* iphdr, uint8_t IPProtocol, std::string payload, const char* SourceIP, const char* DestinationIP)
+void EtherFillIPHeader(ip* iphdr, uint8_t IPProtocol, size_t payload_len, const char* SourceIP, const char* DestinationIP)
 {
     iphdr->ip_hl = 5;
     iphdr->ip_v = 4;
     iphdr->ip_tos = 0;
-    iphdr->ip_len = htons(ETHER_IP_LEN + ETHER_ICMP_HEADER_LEN + payload.length());
+    iphdr->ip_len = htons(ETHER_IP_LEN + ETHER_ICMP_HEADER_LEN + payload_len);
     iphdr->ip_id = htons(1234);
     iphdr->ip_off = htons(IP_DF);
     iphdr->ip_ttl = 64;

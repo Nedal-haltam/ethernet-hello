@@ -1,6 +1,14 @@
 #include <iostream>
 #include <sstream>
+#include <crypto++/aes.h>
+#include <crypto++/gcm.h>
+#include <crypto++/osrng.h>
+#include <crypto++/filters.h>
+#include <crypto++/secblock.h>
 #include "ether.h"
+
+using namespace CryptoPP;
+#define ETHER_TYPE_CUSTOM 0x88B5
 
 const char* program_name = NULL;
 MODE mode = MODE::INVALID;
@@ -40,7 +48,7 @@ void SendIPPingPacket(pcap_t* handle, uint8_t frame[], std::string payload)
     EtherFillEtherHeader(eth, SourceMAC, DestinationMAC, ETHERTYPE_IP);
 
     struct ip* iphdr = (struct ip*)(frame + ETHER_ETHER_HEADER_LEN);
-    EtherFillIPHeader(iphdr, IPPROTO_ICMP, payload, SourceIP, DestinationIP);
+    EtherFillIPHeader(iphdr, IPPROTO_ICMP, payload.length(), SourceIP, DestinationIP);
 
     struct icmphdr* icmp = (struct icmphdr*)(frame + ETHER_ETHER_HEADER_LEN + ETHER_IP_LEN);
     EtherFillICMPHeader(icmp, ICMP_ECHO);
@@ -90,7 +98,8 @@ bool IsValidArgs()
 int main(int argc, char* argv[]) 
 {
     ParseCommandLineArgs(argc, argv);
-    if (!IsValidArgs()) return EXIT_FAILURE;
+    if (!IsValidArgs()) 
+        usage();
     
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle = EtherOpenDevice(NULL, device, errbuf, PROMISC::SEND);
@@ -150,9 +159,13 @@ void ParseCommandLineArgs(int argc, char* argv[])
             if (argc >= 1)
             {
                 if (strcmp(argv[i], "echo") == 0)
+                {
                     mode = MODE::IP_ICMP_ECHO;
+                }
                 else if (strcmp(argv[i], "arpreq") == 0)
+                {
                     mode = MODE::ARP_REQUEST;
+                }
                 argc--; i++;
             }
             else

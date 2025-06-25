@@ -1,9 +1,9 @@
-.PHONY: all build-receive-ether build-send-ether build-aes-gcm run-echo run-arp wire-shark
+.PHONY: all build-receive-ether build-send-ether run-echo run-arp wire-shark
 
 CXX := g++
 CXXFLAGS := -Wall -Wextra -O2
 
-all: build-receive-ether build-send-ether build-aes-gcm
+all: build-receive-ether build-send-ether
 	@echo "✅ Built successfully."
 
 build-receive-ether: receive-ether.cpp
@@ -12,18 +12,14 @@ build-receive-ether: receive-ether.cpp
 
 build-send-ether: send-ether.cpp
 	@echo "🔧 Building send-ether..."
-	$(CXX) $(CXXFLAGS) -o send-ether send-ether.cpp -lpcap
-
-build-aes-gcm: aes-gcm.cpp
-	@echo "🔧 Building aes-gcm..."
-	$(CXX) $(CXXFLAGS) -o aes-gcm aes-gcm.cpp -lcryptopp
+	$(CXX) $(CXXFLAGS) -o send-ether send-ether.cpp -lpcap -lcryptopp
 
 run-echo:
-	sudo ./send-ether -d eth0 -mode echo -sip 172.30.160.245 -dip 192.168.100.1 -smac 0x00155D0CDB26 -dmac 0x00155D0CD85E -n 10
+	sudo ./send-ether -d eth0 -mode echo -sip 172.30.160.245 -dip 192.168.100.1 -smac 0x00155d0cd15d -dmac 0x00155D5DC81A -n 10
 
 # DestinationIP = "172.30.160.1";
 run-arp:
-	sudo ./send-ether -d eth0 -mode arpreq -sip 172.30.160.245 -dip 172.30.160.1 -smac 0x00155D0CDB26 -n 1
+	sudo ./send-ether -d eth0 -mode arpreq -sip 172.30.160.245 -dip 172.30.160.1 -smac 0x00155d0cd15d -n 1
 
 wire-shark:
 	wireshark capture_output.pcap
