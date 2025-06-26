@@ -1,9 +1,9 @@
-.PHONY: all build-receive-ether build-send-ether build-aes-gcm-test run-echo run-macsec-echo run-arp wire-shark
+.PHONY: all build-receive-ether build-send-ether build-aes-gcm-test build-hls run-echo run-macsec-echo run-arp wire-shark
 
 CXX := g++
 CXXFLAGS := -Wall -Wextra -O2
 
-all: build-receive-ether build-send-ether build-aes-gcm-test
+all: build-receive-ether build-send-ether build-aes-gcm-test build-hls
 	@echo "✅ Built successfully."
 
 build-receive-ether: receive-ether.cpp
@@ -17,6 +17,10 @@ build-send-ether: send-ether.cpp
 build-aes-gcm-test: aes-gcm-test.cpp
 	@echo "🔧 Building aes-gcm-test..."
 	$(CXX) $(CXXFLAGS) -o aes-gcm-test aes-gcm-test.cpp -lpcap -lcryptopp
+
+build-hls: hls.c
+	@echo "🔧 Building hls..."
+	gcc $(CXXFLAGS) -o hls hls.c
 
 run-echo:
 	sudo ./send-ether -d eth0 -mode echo -sip 172.30.160.245 -dip 192.168.100.1 -smac 0x00155d0cd15d -dmac 0x00155D5DC81A -n 10
