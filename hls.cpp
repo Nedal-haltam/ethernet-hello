@@ -1,3 +1,5 @@
+// sudo apt install libpcap-dev
+// sudo apt install libcrypto++-dev
 /*
 Trying to compile Crypto++ with HLS is like trying to convert a novel into a circuit diagram — you're working at different abstraction levels.
 */
@@ -55,9 +57,9 @@ int main(void) {
     PrintData(ctx.J0, "J0", BL);
     printf("---------------------------------------------------------\n");
 
-    uint8_t input[PAYLOAD_LEN] = "abcdefghij";
+    uint8_t input[PAYLOAD_LEN+1] = "abcdefghij";
 
-	uint8_t A[AUTH_DATA_LEN] = "EthernetHeader_AAD";
+	uint8_t A[AUTH_DATA_LEN+1] = "EthernetHeader_AAD";
 	uint8_t T[TAG_LEN];
 
     PrintData(input, "Payload", PAYLOAD_LEN);

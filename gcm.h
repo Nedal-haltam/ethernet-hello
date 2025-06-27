@@ -338,7 +338,7 @@ void Cipher(State* state, const word roundkey[Nb * (Nr + 1)]) {
 #ifdef AES_INV_CIPHER
 /*inv cipher functions*/
 
-static void InvSubShiftRows(State s) {
+static void InvSubShiftRows(State& s) {
 	s[0][0] = Inv_S_box[s[0][0]];
 	s[1][0] = Inv_S_box[s[1][0]];
 	s[2][0] = Inv_S_box[s[2][0]];
@@ -395,7 +395,7 @@ void InvCipher(State* state, word* roundkey) {
 
 
 //Copy a block from src to dst
-static void BlockCPY(Block dst, const Block src) {
+static void BlockCPY(Block& dst, const Block& src) {
 	int i;
 	for (i = 0; i < BL; i++) {
 		dst[i] = src[i];
@@ -403,7 +403,7 @@ static void BlockCPY(Block dst, const Block src) {
 }
 
 //Calculate the XOR operation of two blocks: Z = X xor Y.
-static void BlockXOR(Block Z, Block Y) {
+static void BlockXOR(Block& Z, Block& Y) {
 	int i;
 	for (i = 0; i < BL; i++) {
 		Z[i] ^= Y[i];
@@ -469,7 +469,7 @@ static void GHASH_H(Block* out, uint8_t *X, int xlen, const Block* H) {
 }
 
 
-static void inc_32(Block X) {
+static void inc_32(Block& X) {
 	uint32_t temp = ((uint32_t)X[BL - 1]) |
 		((uint32_t)X[BL - 2] << 8) |
 		((uint32_t)X[BL - 3] << 16) |
@@ -483,7 +483,7 @@ static void inc_32(Block X) {
 
 
 //GCTR function
-static void GCTR(Block CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) {
+static void GCTR(Block& CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) {
 	int i, j;
 	uint8_t *pX;
 	pX = X;
