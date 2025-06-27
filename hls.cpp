@@ -77,7 +77,8 @@ int main(void) {
         printf("---------------------------------------------------------\n");
 	}
 	else {
-		exit(EXIT_FAILURE);
+        // TODO: raise a flag or do something in hardware
+		return 1;
 	}
     return 0;
 }

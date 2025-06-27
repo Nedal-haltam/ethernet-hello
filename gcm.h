@@ -1,8 +1,6 @@
 // this is from : https://github.com/FukuanWang/tiny_aes_gcm.git
 
-
 #include <stdint.h>
-#include <stdlib.h>
 
 #ifndef _AES_GCM_H_
 #define _AES_GCM_H_
@@ -411,28 +409,25 @@ static void BlockXOR(Block& Z, Block& Y) {
 
 
 //Calculate the Multiplication of X and Y module R: Z = (X * Y) mod R
-static void Block_Mult(Block* Z, const Block* X, const Block* Y) {
+static void Block_Mult(Block& Z, const Block& X, const Block& Y) {
 	Block V;
-	// memset(V, 0, BL);
 	for (int i = 0; i < BL; i++)
 	{
 		V[i] = 0;
 	}
 	Block Z_temp;
-	// memset(Z_temp, 0, BL);
 	for (int i = 0; i < BL; i++)
 	{
 		Z_temp[i] = 0;
 	}
-	// memcpy(V, *Y, BL);
 	for (int i = 0; i < BL; i++)
 	{
-		V[i] = (*Y)[i];
+		V[i] = Y[i];
 	}
 	int i;
 
 	for (i = 0; i < BL * 8; i++) {
-		if (VALUE(*X, i)) {
+		if (VALUE(X, i)) {
 			BlockXOR(Z_temp, V);
 		}
 		uint8_t temp = (V)[0] << 7;
@@ -450,22 +445,21 @@ static void Block_Mult(Block* Z, const Block* X, const Block* Y) {
 		}
 		V[1] = (V[1] >> 1) | temp;
 	}
-	// memcpy(Z, Z_temp, BL);
 	for (int i = 0; i < BL; i++)
 	{
-		(*Z)[i] = Z_temp[i];
+		Z[i] = Z_temp[i];
 	}
 }
 
 
 //GHASH function
-static void GHASH_H(Block* out, uint8_t *X, int xlen, const Block* H) {
+static void GHASH_H(Block& out, uint8_t X[], int xlen, const Block& H) {
 	int i;
-	//memset(out, 0, BL);
-	uint8_t *pX = X;
+	
+	uint8_t* pX = X;
 
 	for (i = 0; i <= xlen - BL; i += BL) {
-		BlockXOR(*out, *((Block*)pX));
+		BlockXOR(out, *((Block*)pX));
 		Block_Mult(out, out, H);
 		pX += BL;
 	}
@@ -478,7 +472,7 @@ static void GHASH_H(Block* out, uint8_t *X, int xlen, const Block* H) {
 		for (j = xlen; j < i + BL; j++) {
 			end_x[j - i] = 0;
 		}
-		BlockXOR(*out, end_x);
+		BlockXOR(out, end_x);
 		Block_Mult(out, out, H);
 	}
 }
@@ -537,7 +531,6 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	//expansion of the key.
 	KeyExpansion(key, (ctx->roundkey));
 
-	// memset(ctx->H, 0, BL);
 	for (int i = 0; i < BL; i++)
 	{
 		ctx->H[i] = 0;
@@ -549,7 +542,6 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	//on the case IV length equal to 12 bytes
 	if (IVlen == 12) {
 		uint32_t i;
-		// memset(ctx->J0, 0, BL);
 		for (int i = 0; i < BL; i++)
 		{
 			ctx->J0[i] = 0;
@@ -557,21 +549,19 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 		for (i = 0; i < IVlen; i++) {
 			ctx->J0[i] = IV[i];
 		}
-		//memset(ctx->J0 + IVlen, 0, BL - IVlen - 1);
+		
 		ctx->J0[BL - 1] = 1;
 	}
 	//on the case IV length not equal to 12 bytes
 	else {
 		//combine (IV, 0, IVlen) together.
 		//calculate the G_HASH of (IV, 0, IVlen)
-		// memset(ctx->J0, 0, BL);
 		for (int i = 0; i < BL; i++)
 		{
 			ctx->J0[i] = 0;
 		}
-		GHASH_H(&(ctx->J0), IV, IVlen, &(ctx->H));
+		GHASH_H((ctx->J0), IV, IVlen, (ctx->H));
 		Block temp;
-		// memset(temp, 0, BL);
 		for (int i = 0; i < BL; i++)
 		{
 			temp[i] = 0;
@@ -581,7 +571,7 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 		temp[BL - 2] = (uint8_t)(IVlen8 >> 8);
 		temp[BL - 3] = (uint8_t)(IVlen8 >> 16);
 		temp[BL - 4] = (uint8_t)(IVlen8 >> 24);
-		GHASH_H(&(ctx->J0), temp, BL, &(ctx->H));
+		GHASH_H((ctx->J0), temp, BL, (ctx->H));
 	}
 }
 
@@ -598,15 +588,13 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 	//combinate S = (A, 0^v, C, 0^u, Alen, Clen); Clen == Plen.
 	//compute the GHASH value S from the combination  (A, 0^v, C, 0^u, Alen, Clen).
 	Block S;
-	// memset(S, 0, BL);
 	for (int i = 0; i < BL; i++)
 	{
 		S[i] = 0;
 	}
-	GHASH_H(&S, A, Alen, &(ctx->H));
-	GHASH_H(&S, P, Plen, &(ctx->H));
+	GHASH_H(S, A, Alen, (ctx->H));
+	GHASH_H(S, P, Plen, (ctx->H));
 	Block s_end;
-	// memset(s_end, 0, 4);
 	for (int i = 0; i < 4; i++)
 	{
 		s_end[i] = 0;
@@ -616,7 +604,6 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 	s_end[5 ] = (uint8_t)(Alen8 >> 16);
 	s_end[6 ] = (uint8_t)(Alen8 >>  8);
 	s_end[7 ] = (uint8_t)(Alen8);
-	// memset(s_end + 8, 0, 4);
 	for (int i = 8; i < 12; i++)
 	{
 		s_end[i] = 0;
@@ -626,7 +613,7 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 	s_end[13] = (uint8_t)(Plen8 >> 16);
 	s_end[14] = (uint8_t)(Plen8 >>  8);
 	s_end[15] = (uint8_t)(Plen8	  );
-	GHASH_H(&S, s_end, BL, &(ctx->H));
+	GHASH_H(S, s_end, BL, (ctx->H));
 
 	//cipher the hash value S
 	BlockCPY(J0, (ctx->J0));
@@ -647,15 +634,13 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 	//combinate S = (A, 0^v, C, 0^u, Alen, Clen); Clen == Plen.
 	//compute the GHASH value S from the combination  (A, 0^v, C, 0^u, Alen, Clen).
 	Block S;
-	// memset(S, 0, BL);
 	for (int i = 0; i < BL; i++)
 	{
 		S[i] = 0;
 	}
-	GHASH_H(&S, A, Alen, &(ctx->H));
-	GHASH_H(&S, C, Clen, &(ctx->H));
+	GHASH_H(S, A, Alen, (ctx->H));
+	GHASH_H(S, C, Clen, (ctx->H));
 	Block s_end;
-	// memset(s_end, 0, 4);
 	for (int i = 0; i < 4; i++)
 	{
 		s_end[i] = 0;
@@ -665,7 +650,6 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 	s_end[ 5] = (uint8_t)(Alen8 >> 16);
 	s_end[ 6] = (uint8_t)(Alen8 >>  8);
 	s_end[ 7] = (uint8_t)(Alen8      );
-	// memset(s_end + 8, 0, 4);
 	for (int i = 8; i < 12; i++)
 	{
 		s_end[i] = 0;
@@ -675,7 +659,7 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 	s_end[13] = (uint8_t)(Clen8 >> 16);
 	s_end[14] = (uint8_t)(Clen8 >>  8);
 	s_end[15] = (uint8_t)(Clen8      );
-	GHASH_H(&S, s_end, BL, &(ctx->H));
+	GHASH_H(S, s_end, BL, (ctx->H));
 
 	//cipher the hash value S
 	BlockCPY(J0, (ctx->J0));
