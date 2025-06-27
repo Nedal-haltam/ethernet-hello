@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #ifndef _AES_GCM_H_
 #define _AES_GCM_H_
@@ -414,10 +413,22 @@ static void BlockXOR(Block& Z, Block& Y) {
 //Calculate the Multiplication of X and Y module R: Z = (X * Y) mod R
 static void Block_Mult(Block* Z, const Block* X, const Block* Y) {
 	Block V;
-	memset(V, 0, BL);
+	// memset(V, 0, BL);
+	for (int i = 0; i < BL; i++)
+	{
+		V[i] = 0;
+	}
 	Block Z_temp;
-	memset(Z_temp, 0, BL);
-	memcpy(V, *Y, BL);
+	// memset(Z_temp, 0, BL);
+	for (int i = 0; i < BL; i++)
+	{
+		Z_temp[i] = 0;
+	}
+	// memcpy(V, *Y, BL);
+	for (int i = 0; i < BL; i++)
+	{
+		V[i] = (*Y)[i];
+	}
 	int i;
 
 	for (i = 0; i < BL * 8; i++) {
@@ -439,7 +450,11 @@ static void Block_Mult(Block* Z, const Block* X, const Block* Y) {
 		}
 		V[1] = (V[1] >> 1) | temp;
 	}
-	memcpy(Z, Z_temp, BL);
+	// memcpy(Z, Z_temp, BL);
+	for (int i = 0; i < BL; i++)
+	{
+		(*Z)[i] = Z_temp[i];
+	}
 }
 
 
@@ -521,7 +536,12 @@ void AES_init(AES_ctx* ctx, const Key key) {
 void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	//expansion of the key.
 	KeyExpansion(key, (ctx->roundkey));
-	memset(ctx->H, 0, BL);
+
+	// memset(ctx->H, 0, BL);
+	for (int i = 0; i < BL; i++)
+	{
+		ctx->H[i] = 0;
+	}
 
 	//cipher the zero block as H.
 	Cipher((State*)(&(ctx->H)), ctx->roundkey);
@@ -529,7 +549,11 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	//on the case IV length equal to 12 bytes
 	if (IVlen == 12) {
 		uint32_t i;
-		memset(ctx->J0, 0, BL);
+		// memset(ctx->J0, 0, BL);
+		for (int i = 0; i < BL; i++)
+		{
+			ctx->J0[i] = 0;
+		}
 		for (i = 0; i < IVlen; i++) {
 			ctx->J0[i] = IV[i];
 		}
@@ -540,10 +564,18 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	else {
 		//combine (IV, 0, IVlen) together.
 		//calculate the G_HASH of (IV, 0, IVlen)
-		memset(ctx->J0, 0, BL);
+		// memset(ctx->J0, 0, BL);
+		for (int i = 0; i < BL; i++)
+		{
+			ctx->J0[i] = 0;
+		}
 		GHASH_H(&(ctx->J0), IV, IVlen, &(ctx->H));
 		Block temp;
-		memset(temp, 0, BL);
+		// memset(temp, 0, BL);
+		for (int i = 0; i < BL; i++)
+		{
+			temp[i] = 0;
+		}
 		uint32_t IVlen8 = IVlen * 8;
 		temp[BL - 1] = (uint8_t)(IVlen8);
 		temp[BL - 2] = (uint8_t)(IVlen8 >> 8);
@@ -566,17 +598,29 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 	//combinate S = (A, 0^v, C, 0^u, Alen, Clen); Clen == Plen.
 	//compute the GHASH value S from the combination  (A, 0^v, C, 0^u, Alen, Clen).
 	Block S;
-	memset(S, 0, BL);
+	// memset(S, 0, BL);
+	for (int i = 0; i < BL; i++)
+	{
+		S[i] = 0;
+	}
 	GHASH_H(&S, A, Alen, &(ctx->H));
 	GHASH_H(&S, P, Plen, &(ctx->H));
 	Block s_end;
-	memset(s_end, 0, 4);
+	// memset(s_end, 0, 4);
+	for (int i = 0; i < 4; i++)
+	{
+		s_end[i] = 0;
+	}
 	uint32_t Alen8 = Alen << 3;  //change byte-length to bit-length.
 	s_end[4 ] = (uint8_t)(Alen8 >> 24);
 	s_end[5 ] = (uint8_t)(Alen8 >> 16);
 	s_end[6 ] = (uint8_t)(Alen8 >>  8);
 	s_end[7 ] = (uint8_t)(Alen8);
-	memset(s_end + 8, 0, 4);
+	// memset(s_end + 8, 0, 4);
+	for (int i = 8; i < 12; i++)
+	{
+		s_end[i] = 0;
+	}
 	uint32_t Plen8 = Plen << 3; //change byte-length to bit-length.
 	s_end[12] = (uint8_t)(Plen8 >> 24);
 	s_end[13] = (uint8_t)(Plen8 >> 16);
@@ -603,17 +647,29 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 	//combinate S = (A, 0^v, C, 0^u, Alen, Clen); Clen == Plen.
 	//compute the GHASH value S from the combination  (A, 0^v, C, 0^u, Alen, Clen).
 	Block S;
-	memset(S, 0, BL);
+	// memset(S, 0, BL);
+	for (int i = 0; i < BL; i++)
+	{
+		S[i] = 0;
+	}
 	GHASH_H(&S, A, Alen, &(ctx->H));
 	GHASH_H(&S, C, Clen, &(ctx->H));
 	Block s_end;
-	memset(s_end, 0, 4);
+	// memset(s_end, 0, 4);
+	for (int i = 0; i < 4; i++)
+	{
+		s_end[i] = 0;
+	}
 	uint32_t Alen8 = Alen << 3;  //change byte-length to bit-length.
 	s_end[ 4] = (uint8_t)(Alen8 >> 24);
 	s_end[ 5] = (uint8_t)(Alen8 >> 16);
 	s_end[ 6] = (uint8_t)(Alen8 >>  8);
 	s_end[ 7] = (uint8_t)(Alen8      );
-	memset(s_end + 8, 0, 4);
+	// memset(s_end + 8, 0, 4);
+	for (int i = 8; i < 12; i++)
+	{
+		s_end[i] = 0;
+	}
 	uint32_t Clen8 = Clen << 3; //change byte-length to bit-length.
 	s_end[12] = (uint8_t)(Clen8 >> 24);
 	s_end[13] = (uint8_t)(Clen8 >> 16);
