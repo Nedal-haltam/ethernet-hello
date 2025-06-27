@@ -51,7 +51,7 @@ int main(void) {
     printf("---------------------------------------------------------\n");
 	/*parameter setting*/
     AES_ctx ctx;
-	AES_GCM_init(&ctx, key, iv, IV_LEN);
+	AES_GCM_init(ctx, key, iv, IV_LEN);
 
     PrintData(ctx.H, "H", BL);
     PrintData(ctx.J0, "J0", BL);

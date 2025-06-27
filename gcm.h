@@ -89,7 +89,7 @@ initialization of AES
 including:
  -the key expansion.
 */
-void AES_init(AES_ctx* ctx, const Key key);
+void AES_init(AES_ctx& ctx, const Key key);
 
 
 
@@ -99,7 +99,7 @@ cipher the plain text using AES algorithm.
  -length of plain text: 4*Nb bytes
  -length of cipher text: 4*Nb bytes
 */
-void Cipher(State* state, const word roundkey[Nb * (Nr + 1)]);
+void Cipher(State& state, const word roundkey[Nb * (Nr + 1)]);
 
 
 
@@ -110,7 +110,7 @@ Invcipher the cipher text using AES algorithm.
  -length of plain text: 4*Nb bytes
  -length of cipher text: 4*Nb bytes
 */
-void InvCipher(State* state, word* roundkey);
+void InvCipher(State& state, word* roundkey);
 #endif
 
 
@@ -121,7 +121,7 @@ including:
  -calculation of J0
  -calculation of H
 */
-void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen);
+void AES_GCM_init(AES_ctx& ctx, const Key key, uint8_t* IV, uint32_t IVlen);
 
 
 /*
@@ -263,7 +263,7 @@ static void KeyExpansion(const uint8_t key[4 * Nk], word rk[Nb * (Nr + 1)]) {
 }
 
 
-static void AddRoundKey(unsigned int round, State s, const word w[Nb * (Nr + 1)]) {
+static void AddRoundKey(unsigned int round, State& s, const word w[Nb * (Nr + 1)]) {
 	unsigned int r = 0;
 	while (r < Nb) {
 		s[r][0] ^= w[round * Nb + r].a0;
@@ -318,17 +318,17 @@ static inline void MixColumns(State s) {
 
 
 
-void Cipher(State* state, const word roundkey[Nb * (Nr + 1)]) {
-	AddRoundKey(0, *state, roundkey);
+void Cipher(State& state, const word roundkey[Nb * (Nr + 1)]) {
+	AddRoundKey(0, state, roundkey);
 
 	unsigned int round=0;
 	for (round = 1; round < Nr; round++) {
-		SubShiftRows(*state);
-		MixColumns(*state);
-		AddRoundKey(round, *state, roundkey);
+		SubShiftRows(state);
+		MixColumns(state);
+		AddRoundKey(round, state, roundkey);
 	}
-	SubShiftRows(*state);
-	AddRoundKey(Nr, *state, roundkey);
+	SubShiftRows(state);
+	AddRoundKey(Nr, state, roundkey);
 }
 
 
@@ -376,17 +376,17 @@ static void InvMixColumns(State s) {
 	}
 }
 
-void InvCipher(State* state, word* roundkey) {
-	AddRoundKey(Nr, *state, roundkey);
+void InvCipher(State& state, word* roundkey) {
+	AddRoundKey(Nr, state, roundkey);
 
 	int round;
 	for (round = Nr - 1; round > 0; round--) {
-		InvSubShiftRows(*state);
-		AddRoundKey(round, *state, roundkey);
-		InvMixColumns(*state);
+		InvSubShiftRows(state);
+		AddRoundKey(round, state, roundkey);
+		InvMixColumns(state);
 	}
-	InvSubShiftRows(*state);
-	AddRoundKey(0, *state, roundkey);
+	InvSubShiftRows(state);
+	AddRoundKey(0, state, roundkey);
 }
 #endif
 
@@ -500,7 +500,7 @@ static void GCTR(Block& CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) 
 	Block cipherCB;
 	for (i = 0; i < xlen - BL; i += BL) {
 		BlockCPY(cipherCB, CB);
-		Cipher((State*)(&cipherCB), rk);
+		Cipher(*(State*)(&cipherCB), rk);
 		for (j = 0; j < BL; j++) {
 			(pX)[j] ^= cipherCB[j];
 		}
@@ -508,7 +508,7 @@ static void GCTR(Block& CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) 
 		pX += BL;
 	}
 
-	Cipher((State *)CB, rk);
+	Cipher(*(State *)CB, rk);
 	for (j = 0; j < xlen - i; j++) {
 		(pX)[j] ^= (CB)[j];
 	}
@@ -520,37 +520,37 @@ static void GCTR(Block& CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) 
 */
 
 //initialization of AES
-void AES_init(AES_ctx* ctx, const Key key) {
+void AES_init(AES_ctx& ctx, const Key key) {
 	//expansion the key.
-	KeyExpansion(key, (ctx->roundkey));
+	KeyExpansion(key, (ctx.roundkey));
 }
 
 
 //initialization of AES_GCM
-void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
+void AES_GCM_init(AES_ctx& ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	//expansion of the key.
-	KeyExpansion(key, (ctx->roundkey));
+	KeyExpansion(key, (ctx.roundkey));
 
 	for (int i = 0; i < BL; i++)
 	{
-		ctx->H[i] = 0;
+		ctx.H[i] = 0;
 	}
 
 	//cipher the zero block as H.
-	Cipher((State*)(&(ctx->H)), ctx->roundkey);
+	Cipher(*(State*)(&(ctx.H)), ctx.roundkey);
 
 	//on the case IV length equal to 12 bytes
 	if (IVlen == 12) {
 		uint32_t i;
 		for (int i = 0; i < BL; i++)
 		{
-			ctx->J0[i] = 0;
+			ctx.J0[i] = 0;
 		}
 		for (i = 0; i < IVlen; i++) {
-			ctx->J0[i] = IV[i];
+			ctx.J0[i] = IV[i];
 		}
 		
-		ctx->J0[BL - 1] = 1;
+		ctx.J0[BL - 1] = 1;
 	}
 	//on the case IV length not equal to 12 bytes
 	else {
@@ -558,9 +558,9 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 		//calculate the G_HASH of (IV, 0, IVlen)
 		for (int i = 0; i < BL; i++)
 		{
-			ctx->J0[i] = 0;
+			ctx.J0[i] = 0;
 		}
-		GHASH_H((ctx->J0), IV, IVlen, (ctx->H));
+		GHASH_H((ctx.J0), IV, IVlen, (ctx.H));
 		Block temp;
 		for (int i = 0; i < BL; i++)
 		{
@@ -571,7 +571,7 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 		temp[BL - 2] = (uint8_t)(IVlen8 >> 8);
 		temp[BL - 3] = (uint8_t)(IVlen8 >> 16);
 		temp[BL - 4] = (uint8_t)(IVlen8 >> 24);
-		GHASH_H((ctx->J0), temp, BL, (ctx->H));
+		GHASH_H((ctx.J0), temp, BL, (ctx.H));
 	}
 }
 
