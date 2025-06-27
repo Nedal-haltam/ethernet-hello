@@ -304,7 +304,7 @@ namespace ether
     void PrintInfoString(std::string data, std::string name)
     {
         std::cout << name << " length: `" << data.length() << "`" << std::endl;
-        std::cout << name << ":";
+        std::cout << name << ": ";
         for (int i = 0; i < (int)data.length(); i++)
         {
             std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
