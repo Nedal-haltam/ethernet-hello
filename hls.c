@@ -1,9 +1,12 @@
-// /*
-// Trying to compile Crypto++ with HLS is like trying to convert a novel into a circuit diagram — you're working at different abstraction levels.
-// */
-// // TODO: 
-// //  - include "HLS/hls.h"
-// //  - include "HLS/stdio.h" instead of <stdio.h> to automatically omit `printf`s statements
+/*
+Trying to compile Crypto++ with HLS is like trying to convert a novel into a circuit diagram — you're working at different abstraction levels.
+*/
+// TODO: 
+//  - modify the code to make it compatible with intel HLS compiler
+//      - remove dynamic memory interaction (e.g. memset, memcmp, memcpy, malloc, ...)
+//      - make it simple c-code
+//  - include "HLS/hls.h"
+//  - include "HLS/stdio.h" instead of <stdio.h> to automatically omit `printf`s statements
 
 #define GCM1_H
 

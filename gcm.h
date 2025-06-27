@@ -279,31 +279,31 @@ static void AddRoundKey(unsigned int round, State s, const word w[Nb * (Nr + 1)]
 
 
 
-static void SubShiftRows(State* s) {
-	(*s)[0][0] = S_box[(*s)[0][0]];
-	(*s)[1][0] = S_box[(*s)[1][0]];
-	(*s)[2][0] = S_box[(*s)[2][0]];
-	(*s)[3][0] = S_box[(*s)[3][0]];
+static void SubShiftRows(State s) {
+	s[0][0] = S_box[s[0][0]];
+	s[1][0] = S_box[s[1][0]];
+	s[2][0] = S_box[s[2][0]];
+	s[3][0] = S_box[s[3][0]];
 
-	uint8_t temp = (*s)[0][1];
-	(*s)[0][1] = S_box[(*s)[1][1]];
-	(*s)[1][1] = S_box[(*s)[2][1]];
-	(*s)[2][1] = S_box[(*s)[3][1]];
-	(*s)[3][1] = S_box[temp];
+	uint8_t temp = s[0][1];
+	s[0][1] = S_box[s[1][1]];
+	s[1][1] = S_box[s[2][1]];
+	s[2][1] = S_box[s[3][1]];
+	s[3][1] = S_box[temp];
 
-	temp = (*s)[0][2];
-	(*s)[0][2] = S_box[(*s)[2][2]];
-	(*s)[2][2] = S_box[temp];
+	temp = s[0][2];
+	s[0][2] = S_box[s[2][2]];
+	s[2][2] = S_box[temp];
 
-	temp = (*s)[1][2];
-	(*s)[1][2] = S_box[(*s)[3][2]];
-	(*s)[3][2] = S_box[temp];
+	temp = s[1][2];
+	s[1][2] = S_box[s[3][2]];
+	s[3][2] = S_box[temp];
 
-	temp = (*s)[0][3];
-	(*s)[0][3] = S_box[(*s)[3][3]];
-	(*s)[3][3] = S_box[(*s)[2][3]];
-	(*s)[2][3] = S_box[(*s)[1][3]];
-	(*s)[1][3] = S_box[temp];
+	temp = s[0][3];
+	s[0][3] = S_box[s[3][3]];
+	s[3][3] = S_box[s[2][3]];
+	s[2][3] = S_box[s[1][3]];
+	s[1][3] = S_box[temp];
 }
 
 
@@ -326,11 +326,11 @@ void Cipher(State* state, const word roundkey[Nb * (Nr + 1)]) {
 
 	unsigned int round=0;
 	for (round = 1; round < Nr; round++) {
-		SubShiftRows(state);
+		SubShiftRows(*state);
 		MixColumns(*state);
 		AddRoundKey(round, *state, roundkey);
 	}
-	SubShiftRows(state);
+	SubShiftRows(*state);
 	AddRoundKey(Nr, *state, roundkey);
 }
 
@@ -338,31 +338,31 @@ void Cipher(State* state, const word roundkey[Nb * (Nr + 1)]) {
 #ifdef AES_INV_CIPHER
 /*inv cipher functions*/
 
-static void InvSubShiftRows(State* s) {
-	(*s)[0][0] = Inv_S_box[(*s)[0][0]];
-	(*s)[1][0] = Inv_S_box[(*s)[1][0]];
-	(*s)[2][0] = Inv_S_box[(*s)[2][0]];
-	(*s)[3][0] = Inv_S_box[(*s)[3][0]];
+static void InvSubShiftRows(State s) {
+	s[0][0] = Inv_S_box[s[0][0]];
+	s[1][0] = Inv_S_box[s[1][0]];
+	s[2][0] = Inv_S_box[s[2][0]];
+	s[3][0] = Inv_S_box[s[3][0]];
 
-	uint8_t temp = (*s)[3][1];
-	(*s)[3][1] = Inv_S_box[(*s)[2][1]];
-	(*s)[2][1] = Inv_S_box[(*s)[1][1]];
-	(*s)[1][1] = Inv_S_box[(*s)[0][1]];
-	(*s)[0][1] = Inv_S_box[temp];
+	uint8_t temp = s[3][1];
+	s[3][1] = Inv_S_box[s[2][1]];
+	s[2][1] = Inv_S_box[s[1][1]];
+	s[1][1] = Inv_S_box[s[0][1]];
+	s[0][1] = Inv_S_box[temp];
 
-	temp = (*s)[0][2];
-	(*s)[0][2] = Inv_S_box[(*s)[2][2]];
-	(*s)[2][2] = Inv_S_box[temp];
+	temp = s[0][2];
+	s[0][2] = Inv_S_box[s[2][2]];
+	s[2][2] = Inv_S_box[temp];
 
-	temp = (*s)[1][2];
-	(*s)[1][2] = Inv_S_box[(*s)[3][2]];
-	(*s)[3][2] = Inv_S_box[temp];
+	temp = s[1][2];
+	s[1][2] = Inv_S_box[s[3][2]];
+	s[3][2] = Inv_S_box[temp];
 
-	temp = (*s)[0][3];
-	(*s)[0][3] = Inv_S_box[(*s)[1][3]];
-	(*s)[1][3] = Inv_S_box[(*s)[2][3]];
-	(*s)[2][3] = Inv_S_box[(*s)[3][3]];
-	(*s)[3][3] = Inv_S_box[temp];
+	temp = s[0][3];
+	s[0][3] = Inv_S_box[s[1][3]];
+	s[1][3] = Inv_S_box[s[2][3]];
+	s[2][3] = Inv_S_box[s[3][3]];
+	s[3][3] = Inv_S_box[temp];
 }
 
 static void InvMixColumns(State s) {
@@ -384,11 +384,11 @@ void InvCipher(State* state, word* roundkey) {
 
 	int round;
 	for (round = Nr - 1; round > 0; round--) {
-		InvSubShiftRows(state);
+		InvSubShiftRows(*state);
 		AddRoundKey(round, *state, roundkey);
 		InvMixColumns(*state);
 	}
-	InvSubShiftRows(state);
+	InvSubShiftRows(*state);
 	AddRoundKey(0, *state, roundkey);
 }
 #endif
