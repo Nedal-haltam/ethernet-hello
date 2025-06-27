@@ -501,17 +501,32 @@ static void GCTR(Block& CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) 
 	Block cipherCB;
 	for (i = 0; i < xlen - BL; i += BL) {
 		BlockCPY(cipherCB, CB);
-		// TODO: copy and then pass and then copy
-		Cipher(*(State*)(&cipherCB), rk);
+		// Cipher(*(State*)(&cipherCB), rk);
+		State state;
+		for (int i = 0; i < BL; ++i) {
+		    state[i / 4][i % 4] = cipherCB[i];
+		}
+		Cipher(state, rk);
+		for (int i = 0; i < 16; ++i) {
+		    cipherCB[i] = state[i / 4][i % 4];
+		}
 		for (j = 0; j < BL; j++) {
 			(pX)[j] ^= cipherCB[j];
 		}
 		inc_32(CB);
 		pX += BL;
 	}
-	// TODO: copy and then pass and then copy
-	Cipher(*(State *)CB, rk);
-	for (j = 0; j < xlen - i; j++) {
+	// Cipher(*(State *)CB, rk);
+	State state;
+	for (int i = 0; i < BL; ++i) {
+		state[i / 4][i % 4] = CB[i];
+	}
+	Cipher(state, rk);
+	for (int i = 0; i < 16; ++i) {
+		CB[i] = state[i / 4][i % 4];
+	}
+
+		for (j = 0; j < xlen - i; j++) {
 		(pX)[j] ^= (CB)[j];
 	}
 }
@@ -539,8 +554,16 @@ void AES_GCM_init(AES_ctx& ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	}
 
 	//cipher the zero block as H.
-	// TODO: copy and then pass and then copy
-	Cipher(*(State*)(&(ctx.H)), ctx.roundkey);
+	// Cipher(*(State*)(&(ctx.H)), ctx.roundkey);
+	State state;
+	for (int i = 0; i < BL; ++i) {
+		state[i / 4][i % 4] = ctx.H[i];
+	}
+	Cipher(state, ctx.roundkey);
+	for (int i = 0; i < 16; ++i) {
+		ctx.H[i] = state[i / 4][i % 4];
+	}
+
 
 	//on the case IV length equal to 12 bytes
 	if (IVlen == 12) {
