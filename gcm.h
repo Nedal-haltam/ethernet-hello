@@ -104,15 +104,15 @@ void Cipher(State& state, const word roundkey[Nb * (Nr + 1)]);
 
 
 #ifdef AES_INV_CIPHER
+// TODO: check when using `InvCipher` if the roundkey has to be by referece like this or a (word*) like before
 /*
 Invcipher the cipher text using AES algorithm.
  -state should be a 2-dimensional uint_8 array.
  -length of plain text: 4*Nb bytes
  -length of cipher text: 4*Nb bytes
 */
-void InvCipher(State& state, word* roundkey);
+void InvCipher(State& state, word& roundkey);
 #endif
-
 
 /*
 initialization of AES_GCM
@@ -376,17 +376,18 @@ static void InvMixColumns(State s) {
 	}
 }
 
-void InvCipher(State& state, word* roundkey) {
-	AddRoundKey(Nr, state, roundkey);
+// TODO: check when using `InvCipher` if the roundkey has to be by referece like this or a (word*) like before
+void InvCipher(State& state, word& roundkey) {
+	AddRoundKey(Nr, state, &roundkey);
 
 	int round;
 	for (round = Nr - 1; round > 0; round--) {
 		InvSubShiftRows(state);
-		AddRoundKey(round, state, roundkey);
+		AddRoundKey(round, state, &roundkey);
 		InvMixColumns(state);
 	}
 	InvSubShiftRows(state);
-	AddRoundKey(0, state, roundkey);
+	AddRoundKey(0, state, &roundkey);
 }
 #endif
 
@@ -500,6 +501,7 @@ static void GCTR(Block& CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) 
 	Block cipherCB;
 	for (i = 0; i < xlen - BL; i += BL) {
 		BlockCPY(cipherCB, CB);
+		// TODO: copy and then pass and then copy
 		Cipher(*(State*)(&cipherCB), rk);
 		for (j = 0; j < BL; j++) {
 			(pX)[j] ^= cipherCB[j];
@@ -507,7 +509,7 @@ static void GCTR(Block& CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) 
 		inc_32(CB);
 		pX += BL;
 	}
-
+	// TODO: copy and then pass and then copy
 	Cipher(*(State *)CB, rk);
 	for (j = 0; j < xlen - i; j++) {
 		(pX)[j] ^= (CB)[j];
@@ -537,6 +539,7 @@ void AES_GCM_init(AES_ctx& ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 	}
 
 	//cipher the zero block as H.
+	// TODO: copy and then pass and then copy
 	Cipher(*(State*)(&(ctx.H)), ctx.roundkey);
 
 	//on the case IV length equal to 12 bytes
