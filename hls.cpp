@@ -64,14 +64,14 @@ int main(void) {
 
     PrintData(input, "Payload", PAYLOAD_LEN);
     printf("---------------------------------------------------------\n");
-    AES_GCM_cipher(&ctx, input, PAYLOAD_LEN, A, AUTH_DATA_LEN, T, TAG_LEN);
+    AES_GCM_cipher(ctx, input, PAYLOAD_LEN, A, AUTH_DATA_LEN, T, TAG_LEN);
     PrintData(input, "cipher", PAYLOAD_LEN);
     printf("---------------------------------------------------------\n");
     
     PrintData(T, "Tag", TAG_LEN);
     printf("---------------------------------------------------------\n");
     
-	int ret = AES_GCM_Invcipher(&ctx, input, PAYLOAD_LEN, A, AUTH_DATA_LEN, T, TAG_LEN);
+	int ret = AES_GCM_Invcipher(ctx, input, PAYLOAD_LEN, A, AUTH_DATA_LEN, T, TAG_LEN);
 	if (ret) {
         PrintData(input, "Payload", PAYLOAD_LEN);
         printf("---------------------------------------------------------\n");

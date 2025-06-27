@@ -134,7 +134,7 @@ Input parameters:
  -T:	  Authenticated Tag
  -Tlen: the length of the authenticated Tag. (bytes) T <= Block length
 */
-void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen);
+void AES_GCM_cipher(const AES_ctx& ctx, uint8_t* P, uint32_t Plen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen);
 
 
 
@@ -151,7 +151,7 @@ output:
  -failed if return 0
  -success if return 1
 */
-int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen);
+int AES_GCM_Invcipher(AES_ctx& ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen);
 
 
 
@@ -577,13 +577,13 @@ void AES_GCM_init(AES_ctx& ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 
 
 //AES-GCM Encryption
-void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen) {
+void AES_GCM_cipher(const AES_ctx& ctx, uint8_t* P, uint32_t Plen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen) {
 	Block J0;
-	BlockCPY(J0, (ctx->J0));
+	BlockCPY(J0, (ctx.J0));
 	inc_32(J0);
 
 	//cipher the plain text by calling function GCTR
-	GCTR(J0, P, Plen, ctx->roundkey);
+	GCTR(J0, P, Plen, ctx.roundkey);
 
 	//combinate S = (A, 0^v, C, 0^u, Alen, Clen); Clen == Plen.
 	//compute the GHASH value S from the combination  (A, 0^v, C, 0^u, Alen, Clen).
@@ -592,8 +592,8 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 	{
 		S[i] = 0;
 	}
-	GHASH_H(S, A, Alen, (ctx->H));
-	GHASH_H(S, P, Plen, (ctx->H));
+	GHASH_H(S, A, Alen, (ctx.H));
+	GHASH_H(S, P, Plen, (ctx.H));
 	Block s_end;
 	for (int i = 0; i < 4; i++)
 	{
@@ -613,11 +613,11 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 	s_end[13] = (uint8_t)(Plen8 >> 16);
 	s_end[14] = (uint8_t)(Plen8 >>  8);
 	s_end[15] = (uint8_t)(Plen8	  );
-	GHASH_H(S, s_end, BL, (ctx->H));
+	GHASH_H(S, s_end, BL, (ctx.H));
 
 	//cipher the hash value S
-	BlockCPY(J0, (ctx->J0));
-	GCTR(J0, (uint8_t *)S, BL, ctx->roundkey);
+	BlockCPY(J0, (ctx.J0));
+	GCTR(J0, (uint8_t *)S, BL, ctx.roundkey);
 
 	uint32_t i;
 	//return the Tag;
@@ -628,7 +628,7 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 
 
 //AES-GCM Decryption
-int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen) {
+int AES_GCM_Invcipher(AES_ctx& ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen) {
 	Block J0;
 
 	//combinate S = (A, 0^v, C, 0^u, Alen, Clen); Clen == Plen.
@@ -638,8 +638,8 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 	{
 		S[i] = 0;
 	}
-	GHASH_H(S, A, Alen, (ctx->H));
-	GHASH_H(S, C, Clen, (ctx->H));
+	GHASH_H(S, A, Alen, (ctx.H));
+	GHASH_H(S, C, Clen, (ctx.H));
 	Block s_end;
 	for (int i = 0; i < 4; i++)
 	{
@@ -659,11 +659,11 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 	s_end[13] = (uint8_t)(Clen8 >> 16);
 	s_end[14] = (uint8_t)(Clen8 >>  8);
 	s_end[15] = (uint8_t)(Clen8      );
-	GHASH_H(S, s_end, BL, (ctx->H));
+	GHASH_H(S, s_end, BL, (ctx.H));
 
 	//cipher the hash value S
-	BlockCPY(J0, (ctx->J0));
-	GCTR(J0, (uint8_t *)S, BL, ctx->roundkey);
+	BlockCPY(J0, (ctx.J0));
+	GCTR(J0, (uint8_t *)S, BL, ctx.roundkey);
 
 	uint32_t i;
 	//validate the Tag;
@@ -673,9 +673,9 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 		}
 	}
 
-	BlockCPY(J0, (ctx->J0));
+	BlockCPY(J0, (ctx.J0));
 	inc_32(J0);
 	//invcipher the plain text by calling function GCTR
-	GCTR(J0, C, Clen, ctx->roundkey);
+	GCTR(J0, C, Clen, ctx.roundkey);
 	return 1;
 }
