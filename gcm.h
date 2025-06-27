@@ -395,18 +395,18 @@ void InvCipher(State* state, word* roundkey) {
 
 
 //Copy a block from src to dst
-static void BlockCPY(Block* dst, const Block* src) {
+static void BlockCPY(Block dst, const Block src) {
 	int i;
 	for (i = 0; i < BL; i++) {
-		(*dst)[i] = (*src)[i];
+		dst[i] = src[i];
 	}
 }
 
 //Calculate the XOR operation of two blocks: Z = X xor Y.
-static void BlockXOR(Block *Z, Block *Y) {
+static void BlockXOR(Block Z, Block Y) {
 	int i;
 	for (i = 0; i < BL; i++) {
-		(*Z)[i] ^= (*Y)[i];
+		Z[i] ^= Y[i];
 	}
 }
 
@@ -422,7 +422,7 @@ static void Block_Mult(Block* Z, const Block* X, const Block* Y) {
 
 	for (i = 0; i < BL * 8; i++) {
 		if (VALUE(*X, i)) {
-			BlockXOR(&Z_temp, &V);
+			BlockXOR(Z_temp, V);
 		}
 		uint8_t temp = (V)[0] << 7;
 		//on the case LSB_1(V)==1
@@ -450,7 +450,7 @@ static void GHASH_H(Block* out, uint8_t *X, int xlen, const Block* H) {
 	uint8_t *pX = X;
 
 	for (i = 0; i <= xlen - BL; i += BL) {
-		BlockXOR(out, (Block*)pX);
+		BlockXOR(*out, *((Block*)pX));
 		Block_Mult(out, out, H);
 		pX += BL;
 	}
@@ -463,22 +463,22 @@ static void GHASH_H(Block* out, uint8_t *X, int xlen, const Block* H) {
 		for (j = xlen; j < i + BL; j++) {
 			end_x[j - i] = 0;
 		}
-		BlockXOR(out, &end_x);
+		BlockXOR(*out, end_x);
 		Block_Mult(out, out, H);
 	}
 }
 
 
-static void inc_32(Block* X) {
-	uint32_t temp = ((uint32_t)(*X)[BL - 1]) |
-		((uint32_t)(*X)[BL - 2] << 8) |
-		((uint32_t)(*X)[BL - 3] << 16) |
-		((uint32_t)(*X)[BL - 4] << 24);
+static void inc_32(Block X) {
+	uint32_t temp = ((uint32_t)X[BL - 1]) |
+		((uint32_t)X[BL - 2] << 8) |
+		((uint32_t)X[BL - 3] << 16) |
+		((uint32_t)X[BL - 4] << 24);
 	temp++;
-	(*X)[BL - 1] = (uint8_t)((temp));
-	(*X)[BL - 2] = (uint8_t)((temp) >> 8);
-	(*X)[BL - 3] = (uint8_t)((temp) >> 16);
-	(*X)[BL - 4] = (uint8_t)((temp) >> 24);
+	X[BL - 1] = (uint8_t)((temp));
+	X[BL - 2] = (uint8_t)((temp) >> 8);
+	X[BL - 3] = (uint8_t)((temp) >> 16);
+	X[BL - 4] = (uint8_t)((temp) >> 24);
 }
 
 
@@ -490,12 +490,12 @@ static void GCTR(Block* CB, uint8_t* X, int xlen, const word rk[Nb * (Nr + 1)]) 
 
 	Block cipherCB;
 	for (i = 0; i < xlen - BL; i += BL) {
-		BlockCPY(&cipherCB, CB);
+		BlockCPY(cipherCB, *CB);
 		Cipher((State*)(&cipherCB), rk);
 		for (j = 0; j < BL; j++) {
 			(pX)[j] ^= cipherCB[j];
 		}
-		inc_32(CB);
+		inc_32(*CB);
 		pX += BL;
 	}
 
@@ -557,8 +557,8 @@ void AES_GCM_init(AES_ctx* ctx, const Key key, uint8_t* IV, uint32_t IVlen) {
 //AES-GCM Encryption
 void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, uint32_t Alen, uint8_t *T, uint32_t Tlen) {
 	Block J0;
-	BlockCPY(&J0, &(ctx->J0));
-	inc_32(&J0);
+	BlockCPY(J0, (ctx->J0));
+	inc_32(J0);
 
 	//cipher the plain text by calling function GCTR
 	GCTR(&J0, P, Plen, ctx->roundkey);
@@ -585,7 +585,7 @@ void AES_GCM_cipher(const AES_ctx* ctx, uint8_t* P, uint32_t Plen, uint8_t* A, u
 	GHASH_H(&S, s_end, BL, &(ctx->H));
 
 	//cipher the hash value S
-	BlockCPY(&J0, &(ctx->J0));
+	BlockCPY(J0, (ctx->J0));
 	GCTR(&J0, (uint8_t *)S, BL, ctx->roundkey);
 
 	uint32_t i;
@@ -622,7 +622,7 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 	GHASH_H(&S, s_end, BL, &(ctx->H));
 
 	//cipher the hash value S
-	BlockCPY(&J0, &(ctx->J0));
+	BlockCPY(J0, (ctx->J0));
 	GCTR(&J0, (uint8_t *)S, BL, ctx->roundkey);
 
 	uint32_t i;
@@ -633,8 +633,8 @@ int AES_GCM_Invcipher(AES_ctx* ctx, uint8_t* C, uint32_t Clen, uint8_t* A, uint3
 		}
 	}
 
-	BlockCPY(&J0, &(ctx->J0));
-	inc_32(&J0);
+	BlockCPY(J0, (ctx->J0));
+	inc_32(J0);
 	//invcipher the plain text by calling function GCTR
 	GCTR(&J0, C, Clen, ctx->roundkey);
 	return 1;
