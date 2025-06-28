@@ -1,5 +1,4 @@
 // this is from : https://github.com/FukuanWang/tiny_aes_gcm.git
-
 #include <stdint.h>
 
 #ifndef _AES_GCM_H_
