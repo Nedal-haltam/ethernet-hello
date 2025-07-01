@@ -317,7 +317,7 @@ namespace ether
 
     void encrypt_decrypt_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
     {
-        std::string payload = "abcdefghij";
+        std::string payload = "abcdefghijklmnop";
         std::string cipher = encrypt(payload, key, iv, aad);
         std::string recovered = decrypt(cipher, key, iv, aad);
 
