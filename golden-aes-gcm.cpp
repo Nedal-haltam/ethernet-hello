@@ -1,15 +1,12 @@
-#include <iostream>
 
-// #include "ether.h"
+#ifdef ECB
 #include <iostream>
 #include <iomanip>
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>     // ECB_Mode
 #include <cryptopp/filters.h>   // StringSource, StreamTransformationFilter
-
 #define KEY_LEN 16
 #define PAYLOAD_LEN 16
-
 void ecb()
 {    // Key and input data
     uint8_t key[KEY_LEN] = {
@@ -56,11 +53,43 @@ void ecb()
 
     std::cout << "Decrypted:  " << decrypted << "\n";
 }
+#else
+#include <iostream>
+#include "ether.h"
+#endif
+
 
 int main(void)
 {
+#ifdef ECB
     ecb();
     return 0;
+#else
+    {
+        SecByteBlock key(AES::DEFAULT_KEYLENGTH);
+        byte iv[IV_LEN];
+        std::string aad;
+        ether::load(key, iv, aad, "key_iv_aad.bin");
+
+        std::cout << "key: ";
+        for (int i = 0; i < AES::DEFAULT_KEYLENGTH; i++)
+        {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                    << (static_cast<unsigned int>(static_cast<unsigned char>(key.data()[i]))) << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "iv: ";
+        for (int i = 0; i < IV_LEN; i++)
+        {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                    << (static_cast<unsigned int>(static_cast<unsigned char>(iv[i]))) << " ";
+        }
+
+        std::cout << std::dec << std::nouppercase << std::setfill(' ');
+        std::cout << std::endl;
+        ether::encrypt_decrypt_and_print(key, iv, aad);
+    }
+#endif
     // {
     //     SecByteBlock key1(AES::DEFAULT_KEYLENGTH);
     //     byte iv1[IV_LEN];
@@ -74,28 +103,4 @@ int main(void)
     // }
     // return 0;
     // std::cout << "---------------------------------------------------------" << std::endl;
-    // {
-    //     SecByteBlock key(AES::DEFAULT_KEYLENGTH);
-    //     byte iv[IV_LEN];
-    //     std::string aad;
-    //     ether::load(key, iv, aad, "key_iv_aad.bin");
-
-    //     std::cout << "key: ";
-    //     for (int i = 0; i < AES::DEFAULT_KEYLENGTH; i++)
-    //     {
-    //         std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-    //                 << (static_cast<unsigned int>(static_cast<unsigned char>(key.data()[i]))) << " ";
-    //     }
-    //     std::cout << std::endl;
-    //     std::cout << "iv: ";
-    //     for (int i = 0; i < IV_LEN; i++)
-    //     {
-    //         std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-    //                 << (static_cast<unsigned int>(static_cast<unsigned char>(iv[i]))) << " ";
-    //     }
-
-    //     std::cout << std::dec << std::nouppercase << std::setfill(' ');
-    //     std::cout << std::endl;
-    //     ether::encrypt_decrypt_and_print(key, iv, aad);
-    // }
 }
