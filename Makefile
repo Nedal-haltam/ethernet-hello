@@ -16,11 +16,21 @@ build-send-ether: send-ether.cpp
 
 build-golden-aes-gcm: golden-aes-gcm.cpp
 	@echo "🔧 Building golden-aes-gcm..."
-	$(CXX) $(CXXFLAGS) -o golden-aes-gcm golden-aes-gcm.cpp -lpcap -lcryptopp -DECB
+	$(CXX) $(CXXFLAGS) -o golden-aes-gcm golden-aes-gcm.cpp -lpcap -lcryptopp
 
 build-aes-gcm: aes-gcm.cpp
 	@echo "🔧 Building aes-gcm..."
 	$(CXX) $(CXXFLAGS) -o aes-gcm aes-gcm.cpp
+
+build-macsec: build-macsec-sender build-macsec-listener
+	@echo "🔧 Building macsec..."
+
+build-macsec-sender: macsec-sender.cpp
+	@echo "🔧 Building macsec-sender..."
+	$(CXX) $(CXXFLAGS) -o macsec-sender macsec-sender.cpp -lpcap -lcryptopp
+build-macsec-listener: macsec-listener.cpp
+	@echo "🔧 Building macsec-listener..."
+	$(CXX) $(CXXFLAGS) -o macsec-listener macsec-listener.cpp -lpcap -lcryptopp
 
 run-echo:
 	sudo ./send-ether -d eth0 -mode echo -sip 172.30.160.245 -dip 192.168.100.1 -smac 0x00155d0cd15d -dmac 0x00155D5DC81A -n 10
