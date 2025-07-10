@@ -68,8 +68,15 @@ int main(void)
     {
         SecByteBlock key(AES::DEFAULT_KEYLENGTH);
         byte iv[IV_LEN];
-        std::string aad;
-        ether::load(key, iv, aad, "key_iv_aad.bin");
+        std::string aad1;
+        ether::load(key, iv, aad1, "key_iv_aad.bin");
+        byte aad[16] = {
+            0x02, 0x00,  // CA or (TCI, AN/SL)
+            0x00, 0x01,  // PN = ...
+            
+            0xE8, 0xE2, 0xBB, 0xD9, 0x43, 0x73, 0x4F, 0x2E,
+            0x68, 0x8F, 0xC4, 0x55
+        };
 
         std::cout << "key: ";
         for (int i = 0; i < AES::DEFAULT_KEYLENGTH; i++)

@@ -256,7 +256,7 @@ namespace ether
     }
 
 
-    std::string encrypt(std::string plain, SecByteBlock key, byte iv[IV_LEN], std::string aad)
+    std::string encrypt(std::string plain, SecByteBlock key, byte iv[IV_LEN], byte* aad)
     {
         std::string cipher;
         try {
@@ -265,7 +265,7 @@ namespace ether
 
             AuthenticatedEncryptionFilter ef(enc, new StringSink(cipher), false, TAG_LEN);
 
-            ef.ChannelPut("AAD", reinterpret_cast<const byte*>(aad.data()), aad.length());
+            ef.ChannelPut("AAD", aad, 16);
             ef.ChannelMessageEnd("AAD");
 
             ef.ChannelPut("", reinterpret_cast<const byte*>(plain.data()), plain.length());
@@ -277,7 +277,7 @@ namespace ether
         return cipher;
     }
 
-    std::string decrypt(std::string cipher, SecByteBlock key, byte* iv, std::string aad)
+    std::string decrypt(std::string cipher, SecByteBlock key, byte* iv, byte* aad)
     {
         std::string recovered;
         try 
@@ -287,7 +287,7 @@ namespace ether
 
             AuthenticatedDecryptionFilter df(dec, new StringSink(recovered), AuthenticatedDecryptionFilter::THROW_EXCEPTION, TAG_LEN);
 
-            df.ChannelPut("AAD", (const byte*)aad.data(), aad.size());
+            df.ChannelPut("AAD", aad, 16);
             df.ChannelMessageEnd("AAD");
 
             df.ChannelPut("", (const byte*)cipher.data(), cipher.size());
@@ -315,7 +315,7 @@ namespace ether
         std::cout << name << ": " << "`" << data << "`" << std::endl;
     }
 
-    void encrypt_decrypt_and_print(SecByteBlock& key, byte iv[IV_LEN], std::string& aad)
+    void encrypt_decrypt_and_print(SecByteBlock& key, byte iv[IV_LEN], byte* aad)
     {
         std::string payload = "abcdefghijklmnop";
         std::string cipher = encrypt(payload, key, iv, aad);
@@ -432,8 +432,15 @@ namespace ether
 
                 SecByteBlock key(AES::DEFAULT_KEYLENGTH);
                 byte ivtemp[IV_LEN];
-                std::string aad;
-                load(key, ivtemp, aad, "key_iv_aad.bin");
+                std::string aad1;
+                load(key, ivtemp, aad1, "key_iv_aad.bin");
+                byte aad[16] = {
+                    0x02, 0x00,  // CA or (TCI, AN/SL)
+                    0x00, 0x01,  // PN = ...
+                    
+                    0xE8, 0xE2, 0xBB, 0xD9, 0x43, 0x73, 0x4F, 0x2E,
+                    0x68, 0x8F, 0xC4, 0x55
+                };
                 std::string plain = decrypt(cipher, key, iv, aad);
                 std::cout << "the plain is : " << plain << std::endl;
             }

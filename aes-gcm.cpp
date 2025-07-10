@@ -1,9 +1,4 @@
-// sudo apt install libpcap-dev
-// sudo apt install libcrypto++-dev
 
-#define GCM1_H
-
-#ifdef GCM1_H
 #include <stdio.h>
 #include "gcm.h"
 
@@ -73,19 +68,3 @@ int main(void) {
 	}
     return 0;
 }
-
-#else
-
-#include <stdio.h>
-#include "gcm2.h"
-
-int main(void)
-{
-    printf("hello, gcm 2\n");
-    return 0;
-}
-
-#endif
-
-
-
