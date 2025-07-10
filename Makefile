@@ -16,7 +16,7 @@ build-send-ether: send-ether.cpp
 
 build-golden-aes-gcm: golden-aes-gcm.cpp
 	@echo "🔧 Building golden-aes-gcm..."
-	$(CXX) $(CXXFLAGS) -o golden-aes-gcm golden-aes-gcm.cpp -lpcap -lcryptopp
+	$(CXX) $(CXXFLAGS) -o golden-aes-gcm golden-aes-gcm.cpp -lpcap -lcryptopp -DECB
 
 build-aes-gcm: aes-gcm.cpp
 	@echo "🔧 Building aes-gcm..."

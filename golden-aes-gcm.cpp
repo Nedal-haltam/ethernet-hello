@@ -48,7 +48,7 @@ void ecb()
     std::cout << "Plaintext:  " << input << "\n";
     std::cout << "Encrypted:  ";
     for (int i = 0; i < PAYLOAD_LEN; ++i)
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)output[i];
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)output[i] << " ";
     std::cout << "\n";
 
     std::cout << "Decrypted:  " << decrypted << "\n";

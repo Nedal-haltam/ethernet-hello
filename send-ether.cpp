@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
                 // payload = [IV (12 bytes)] [ciphertext + tag (TAG_LEN bytes)]
                 std::string cipher = ether::encrypt(plain, key, iv, aad);
                 std::string IV(reinterpret_cast<const char*>(iv), IV_LEN);
-                payload = MAGIC_MACSEC_WORD + IV + cipher;
+                payload = MAGIC_MACSEC_WORD + IV + cipher; // -> tag is in cipher
             }
             else
             {
