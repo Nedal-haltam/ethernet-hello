@@ -3,8 +3,8 @@
 #include <iostream>
 #include <iomanip>
 #include <cryptopp/aes.h>
-#include <cryptopp/modes.h>     // ECB_Mode
-#include <cryptopp/filters.h>   // StringSource, StreamTransformationFilter
+#include <cryptopp/modes.h>
+#include <cryptopp/filters.h>
 #define KEY_LEN 16
 #define PAYLOAD_LEN 16
 void ecb()

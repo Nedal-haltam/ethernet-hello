@@ -102,7 +102,7 @@ void packet_handler(u_char* user, const struct pcap_pkthdr* header, const u_char
         std::cerr << "Decryption failed: " << e.what() << std::endl;
     }
 
-    print_hex(icv, 16, "ICV");
+    print_hex(icv, 16, "ICV/TAG");
 
     std::cout << "=============================\n";
 }

@@ -46,6 +46,20 @@ int main() {
     };
     // SecByteBlock key(AES::DEFAULT_KEYLENGTH);
     // prng.GenerateBlock(key, key.size());
+    uint8_t iv[12] = {0};
+    // Construct AAD (MACsec SecTAG + SCI (optional) = 16 bytes)
+    // uint8_t iv[12] = {
+    //     0xE8, 0xE2, 0xBB, 0xD9, 0x43, 0x73, 0x4F, 0x2E, 0x68, 0x8F, 0xC4, 0x55
+    // };
+    byte aad[16] = {
+        0x02, 0x00,  // CA or (TCI, AN/SL)
+        0x00, 0x01,  // PN = ...
+        
+        0xE8, 0xE2, 0xBB, 0xD9, 0x43, 0x73, 0x4F, 0x2E,
+        0x68, 0x8F, 0xC4, 0x55
+    };
+    byte dst[6] = {0x00, 0x15, 0x5D, 0x21, 0xB2, 0x82};
+    byte src[6] = {0x00, 0x15, 0x5d, 0x70, 0xab, 0xe5};
 
     std::string plaintext = "abcdefghijklmnop"; // 16 bytes
 /*
@@ -58,29 +72,12 @@ The Security tag inside each frame in addition to EtherType includes:
     - A Connectivity Association (CA) number within the channel
     - A packet number (PN) to provide a unique initialization vector for encryption and authentication algorithms as well as protection against replay attacks
     - An optional LAN-wide Secure Channel Identifier (SCI), which is not required on point-to-point links.
-*/
-    // Construct AAD (MACsec SecTAG + SCI (optional) = 16 bytes)
-    // uint8_t iv[12] = {
-    //     0xE8, 0xE2, 0xBB, 0xD9, 0x43, 0x73, 0x4F, 0x2E, 0x68, 0x8F, 0xC4, 0x55
-    // };
-    uint8_t iv[12] = {0};
-    byte aad[16] = {
-        0x02, 0x00,  // CA or (TCI, AN/SL)
-        0x00, 0x01,  // PN = ...
-        
-        0xE8, 0xE2, 0xBB, 0xD9, 0x43, 0x73, 0x4F, 0x2E,
-        0x68, 0x8F, 0xC4, 0x55
-    };
-    byte dst[6] = {0x00, 0x15, 0x5D, 0x21, 0xB2, 0x82};
-    byte src[6] = {0x00, 0x15, 0x5d, 0x70, 0xab, 0xe5};
-
+*/    
     // Set IV from PN + SCI
     memcpy(iv, aad + 4, 12);
-
     std::string ciphertext = Encrypt(key, iv, plaintext, aad);
 
     byte packet[1500] = {0};
-
     memcpy(packet, dst, 6);
     memcpy(packet + 6, src, 6);
 
