@@ -11,7 +11,6 @@
 
 
 #define INTERFACE_NAME "eth0"
-// TODO: construct frames and send
 int main() {
     int sockfd;
     char buffer[2048]; // buffer to store the frame

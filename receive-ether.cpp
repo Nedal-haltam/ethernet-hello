@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 
     // ether::PrintDevices(ether::InitDevices());
     // return 0;
-    // TODO: filter packets
+    // can filter packets
     // bpf_program fp;
     // pcap_compile(handle, &fp, "tcp", 0, PCAP_NETMASK_UNKNOWN);
     // pcap_setfilter(handle, &fp);

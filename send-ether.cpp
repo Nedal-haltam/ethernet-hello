@@ -112,7 +112,6 @@ int main(int argc, char* argv[])
             ether::load(key, iv, aad, "key_iv_aad.bin");
         }
         for (int i = 0; i < config.NumberOfPackets; i++) {
-            // TODO: change payload to uint8_t[]
             std::string payload;
             std::stringstream ss;
             ss << "Hello, Router! Packet #" << (i + 1);

@@ -103,7 +103,6 @@ void Cipher(State& state, const word roundkey[Nb * (Nr + 1)]);
 
 
 #ifdef AES_INV_CIPHER
-// TODO: check when using `InvCipher` if the roundkey has to be by referece like this or a (word*) like before
 /*
 Invcipher the cipher text using AES algorithm.
  -state should be a 2-dimensional uint_8 array.
@@ -375,7 +374,6 @@ static void InvMixColumns(State s) {
 	}
 }
 
-// TODO: check when using `InvCipher` if the roundkey has to be by referece like this or a (word*) like before
 void InvCipher(State& state, word& roundkey) {
 	AddRoundKey(Nr, state, &roundkey);
 
