@@ -95,8 +95,8 @@ The Security tag inside each frame in addition to EtherType includes:
 */    
     // Set IV from PN + SCI
     memcpy(iv, aad + 4, 12);
-    // std::string ciphertext = Encrypt(key, iv, plaintext, aad);
-    std::string ciphertext = plaintext;
+    std::string ciphertext = Encrypt(key, iv, plaintext, aad);
+    // std::string ciphertext = plaintext;
 
     byte packet[1500] = {0};
     memcpy(packet, dst, 6);
@@ -114,13 +114,13 @@ The Security tag inside each frame in addition to EtherType includes:
     // ICV (GCM tag is already appended in ciphertext)
     size_t total_len = 30 + ciphertext.size();
     StartClock();
-    for (int i = 0; i < 100; i++)
-    {
+    // for (int i = 0; i < 100; i++)
+    // {
         if (pcap_sendpacket(handle, packet, total_len) != 0) {
             std::cerr << "pcap_sendpacket failed: " << pcap_geterr(handle) << std::endl;
             return 1;
         }
-    }
+    // }
     EvaluateClock(true);
     std::cout << "MACsec frame with AES-GCM and ICV sent successfully.\n";
     pcap_close(handle);
