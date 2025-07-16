@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
                 // if MACSEC_AES_GCM_ENCRYPT flag was raised
                 // ciphertext = encrypt(payload)
                 // payload = [IV (12 bytes)] [ciphertext + tag (TAG_LEN bytes)]
-                std::string cipher = ether::encrypt(plain, key, iv, aad);
+                std::string cipher = ether::encrypt(plain, key, iv, (unsigned char*)aad.data());
                 std::string IV(reinterpret_cast<const char*>(iv), IV_LEN);
                 payload = MAGIC_MACSEC_WORD + IV + cipher; // -> tag is in cipher
             }
