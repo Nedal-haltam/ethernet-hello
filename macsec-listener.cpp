@@ -1,4 +1,3 @@
-
 #include <iomanip>
 #include <pcap.h>
 #include <cryptopp/gcm.h>
@@ -7,6 +6,26 @@
 #include <cryptopp/osrng.h>
 #include <iostream>
 #include <cstring>
+#include <time.h>
+#include <iomanip>
+
+clock_t Clocker;
+void StartClock()
+{
+    Clocker = clock();
+}
+double EvaluateClock(bool Verbose = false)
+{
+    clock_t t = clock() - Clocker;
+    double TimeTaken = (double)(t) / CLOCKS_PER_SEC;
+    if (Verbose)
+    {
+        std::cout << "Time taken (precision): " << std::fixed << std::setprecision(8) << TimeTaken << "s\n";
+    }
+    std::cout.unsetf(std::ios::fixed);
+    std::cout.precision(6);
+    return TimeTaken;
+}
 
 using namespace CryptoPP;
 

@@ -5,6 +5,26 @@
 #include <cryptopp/osrng.h>
 #include <iostream>
 #include <cstring>
+#include <time.h>
+#include <iomanip>
+
+clock_t Clocker;
+void StartClock()
+{
+    Clocker = clock();
+}
+double EvaluateClock(bool Verbose = false)
+{
+    clock_t t = clock() - Clocker;
+    double TimeTaken = (double)(t) / CLOCKS_PER_SEC;
+    if (Verbose)
+    {
+        std::cout << "Time taken (precision): " << std::fixed << std::setprecision(8) << TimeTaken << "s\n";
+    }
+    std::cout.unsetf(std::ios::fixed);
+    std::cout.precision(6);
+    return TimeTaken;
+}
 
 using namespace CryptoPP;
 
@@ -75,7 +95,8 @@ The Security tag inside each frame in addition to EtherType includes:
 */    
     // Set IV from PN + SCI
     memcpy(iv, aad + 4, 12);
-    std::string ciphertext = Encrypt(key, iv, plaintext, aad);
+    // std::string ciphertext = Encrypt(key, iv, plaintext, aad);
+    std::string ciphertext = plaintext;
 
     byte packet[1500] = {0};
     memcpy(packet, dst, 6);
@@ -92,10 +113,15 @@ The Security tag inside each frame in addition to EtherType includes:
 
     // ICV (GCM tag is already appended in ciphertext)
     size_t total_len = 30 + ciphertext.size();
-    if (pcap_sendpacket(handle, packet, total_len) != 0) {
-        std::cerr << "pcap_sendpacket failed: " << pcap_geterr(handle) << std::endl;
-        return 1;
+    StartClock();
+    for (int i = 0; i < 100; i++)
+    {
+        if (pcap_sendpacket(handle, packet, total_len) != 0) {
+            std::cerr << "pcap_sendpacket failed: " << pcap_geterr(handle) << std::endl;
+            return 1;
+        }
     }
+    EvaluateClock(true);
     std::cout << "MACsec frame with AES-GCM and ICV sent successfully.\n";
     pcap_close(handle);
 

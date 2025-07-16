@@ -1,9 +1,9 @@
 .PHONY: all build-receive-ether build-send-ether build-golden-aes-gcm build-aes-gcm run-echo run-macsec-echo run-arp wire-shark
 
 CXX := g++
-CXXFLAGS := -Wall -Wextra -O2
+CXXFLAGS := -Wall -Wextra -O3
 
-all: build-receive-ether build-send-ether build-golden-aes-gcm build-aes-gcm
+all: build-receive-ether build-send-ether build-golden-aes-gcm build-macsec
 	@echo "✅ Built successfully."
 
 build-receive-ether: receive-ether.cpp
@@ -17,10 +17,6 @@ build-send-ether: send-ether.cpp
 build-golden-aes-gcm: golden-aes-gcm.cpp
 	@echo "🔧 Building golden-aes-gcm..."
 	$(CXX) $(CXXFLAGS) -o golden-aes-gcm golden-aes-gcm.cpp -lpcap -lcryptopp
-
-build-aes-gcm: aes-gcm.cpp
-	@echo "🔧 Building aes-gcm..."
-	$(CXX) $(CXXFLAGS) -o aes-gcm aes-gcm.cpp
 
 build-macsec: build-macsec-sender build-macsec-listener
 	@echo "🔧 Building macsec..."
