@@ -124,7 +124,6 @@ The Security tag inside each frame in addition to EtherType includes:
     EvaluateClock(true);
     std::cout << "MACsec frame with AES-GCM and ICV sent successfully.\n";
     pcap_close(handle);
-
     // frame structure:
     // 6 bytes - Destination MAC
     // 6 bytes - Source MAC
